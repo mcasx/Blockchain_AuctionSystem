@@ -2,6 +2,8 @@ from Auction import Auction
 from flask import Flask,request
 import pickle
 import datetime
+from datetime import datetime, timedelta
+import threading
 
 app = Flask(__name__)
 auctions = []
@@ -13,6 +15,14 @@ def hello():
 @app.route("/create_auction", methods=['GET', 'POST'])
 def create_auction():
     auction = pickle.loads(request.form['auction'])
+    
+    now = datetime.now()
+    if now > auction.time_limit:
+            auction.close()
+    else:
+        delay = (auction.time_limit - now).total_seconds()
+        threading.Timer(delay, auction.close).start()
+   
     auctions.append(auction)
     return "Auction Created"
 
@@ -45,5 +55,4 @@ def get_auction(serial_number):
 
 
 if __name__ == "__main__":
-    app.run()
-
+    app.run(host='0.0.0.0')
