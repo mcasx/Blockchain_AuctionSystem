@@ -1,8 +1,8 @@
 from hashlib import sha256
 from Bid import Bid
 
-class Auction:
-    def __init__(self, name, serial_number, time_limit, description, auction_type, creator, rules):
+class auction():
+    def __init__(self, name, serial_number, time_limit, description, auction_type, creator, rules = None):
         self.name = name
         self.serial_number = serial_number
         self.time_limit = time_limit
