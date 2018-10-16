@@ -1,30 +1,56 @@
-from Auction import Auction
+from Auction import auction
 from flask import Flask,request
 import pickle
 import datetime
 from datetime import datetime, timedelta
 import threading
+import uuid
+import json
 
 app = Flask(__name__)
 auctions = []
 
 @app.route("/")
 def hello():
-    return "Hey"
+    return "Hey "
 
-@app.route("/create_auction", methods=['GET', 'POST'])
+@app.route("/create_auction", methods=['POST'])
 def create_auction():
-    auction = pickle.loads(request.form['auction'])
+    name = request.form['name']
+    time_limit = request.form['timeLimit']
+    description = request.form['description']
+    auction_type = request.form['auctionType']
+    creator = request.form['creator']
+    bid_validations = request.form.get('bid_validations') 
+    serial_number = request.form['serialNumber']
+    new_auction = auction(name, serial_number, time_limit, description, auction_type, creator, bid_validations)
     
     now = datetime.now()
-    if now > auction.time_limit:
-            auction.close()
+
+    if now > new_auction.time_limit:
+            new_auction.close()
     else:
-        delay = (auction.time_limit - now).total_seconds()
-        threading.Timer(delay, auction.close).start()
+        delay = (new_auction.time_limit - now).total_seconds()
+        threading.Timer(delay, new_auction.close).start()
    
     auctions.append(auction)
     return "Auction Created"
+
+@app.route("/create_test_auction")
+def create_test_auction():
+    auctions.append(
+        auction(
+            str(uuid.uuid4()), 
+            str(uuid.uuid4()),
+            datetime.now(),
+            str(uuid.uuid4()),
+            0,
+            str(uuid.uuid4()),
+            None
+        )
+    )
+    return json.dumps(auctions[-1].__dict__, indent=4, default=str)
+    
 
 @app.route("/bid", methods=['POST'])
 def bid():
@@ -38,6 +64,7 @@ def bid():
     
     return "Bid added" if auction.add_bid(user, value) else "Bid refused"
 
+
 @app.route("/close_auction", methods=['POST'])
 def close_auction():
     serial_number = request.form['serial_number']
@@ -48,11 +75,17 @@ def close_auction():
     return "Auction closed"
 
 
+@app.route("/get_auctions", methods=['GET'])
+def get_auctions():
+    return str(json.dumps([x.__dict__ for x in auctions], indent=4, default=str))
+
 def get_auction(serial_number):
     for a in auctions:
         if a.serial_number == serial_number: return a.serial_number
     return None
 
 
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0')
+    
+    app.run(host='0.0.0.0', port=3000)
