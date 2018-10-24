@@ -17,7 +17,7 @@ def hello():
 @app.route("/create_auction", methods=['POST'])
 def create_auction():
     name = request.form['name']
-    time_limit = request.form['timeLimit']
+    time_limit = datetime.strptime(request.form['timeLimit'], '%b %d %Y %I:%M%p')
     description = request.form['description']
     auction_type = request.form['auctionType']
     creator = request.form['creator']
@@ -33,7 +33,7 @@ def create_auction():
         delay = (new_auction.time_limit - now).total_seconds()
         threading.Timer(delay, new_auction.close).start()
    
-    auctions.append(auction)
+    auctions.append(new_auction)
     return "Auction Created"
 
 @app.route("/create_test_auction")
@@ -64,6 +64,11 @@ def bid():
     
     return "Bid added" if auction.add_bid(user, value) else "Bid refused"
 
+@app.route('/get_open_user_auctions', methods=['GET'])
+def get_open_user_auctions():
+    return str(json.dumps([x.__dict__ for x in [y for y in auctions if (y.state == 'Open' and y.creator == request.args.get('user'))]], indent=4, default=str))
+
+
 
 @app.route("/close_auction", methods=['POST'])
 def close_auction():
@@ -87,5 +92,5 @@ def get_auction(serial_number):
 
 
 if __name__ == "__main__":
-    
+
     app.run(host='0.0.0.0', port=3000)
