@@ -21,10 +21,26 @@ menu = ConsoleMenu("Auction Client")
 clear = lambda: os.system('clear')
 
 
+
 with open('addresses.json', 'r') as myfile:
     addresses = json.load(myfile)
 auction_manager_add = addresses['manager']
 auction_repository_add = addresses['repository']
+
+
+def is_int(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 def hello():
     input("hello")
@@ -64,22 +80,92 @@ def create_test_auction():
     clear()
     description = 'test description ' + str(randint(1,100))
     clear()
-    time_limit = 'Jun 1 2005 1:33PM'
+    time_limit = 'Jun 1 2020 1:33PM'
     clear()
     auction_type = "English Auction"
     clear()
     creator = get_user()
-    r = requests.post(auction_manager_add + "/createAuction", data={'name': name_of_auction, 'description': description, 'timeLimit': time_limit, 'auctionType': auction_type, 'creator' : creator})
+    r = requests.post(auction_manager_add + "/createAuction", data={
+        'name': name_of_auction, 
+        'description': description, 
+        'timeLimit': time_limit, 
+        'auctionType': auction_type, 
+        'creator' : creator
+    })
     input(r.text)
     return 
     
 def close_auction():
+    params = {'user':get_user()}
+    r = requests.get(auction_repository_add + "/get_open_user_auctions", params=params) 
+    auctions = json.loads(r.text)
     
-    return ""
+    if not auctions:
+        input('User has no open auctions\n\n\nPress enter to continue')
+        return
+    i = 1
+    for auction in auctions:
+        print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
+
+    selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
+    while(not is_int(selection) or (int(selection) < 0 or int(selection)> len(auctions))):
+        if(selection and selection[0] == 'q'): return
+        clear()
+        input('Invalid Selection\n\nPress Enter to continue ')
+        clear()
+        for auction in auctions:
+            print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
+        selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
+    
+    r = requests.post(auction_repository_add + '/close_auction', data = {
+        'serial_number' : auctions[int(selection)-1]['serial_number']
+    })
+    input('\n' + r.text + '\n\nPress Enter to continue')
+    return 
     #todo
 
-def bid():
-    return ""
+def place_bid():
+    params = {'user':get_user()}
+    r = requests.get(auction_repository_add + "/get_open_user_auctions", params=params) 
+    auctions = json.loads(r.text)
+    
+    if not auctions:
+        input('There are no open auctions\n\nPress enter to continue')
+        return
+    
+    i = 1
+
+    for auction in auctions:
+        print('\n' + (str(i) if i > 10 else ('0' + str(i))) + ') Serial Number: ' + auction['serial_number'] + '\n    Name         : ' + auction['name'])
+        i += 1
+    selection = input('\n' + 'Select auction to bid (enter q to exit): ')
+
+    while(not is_int(selection) or (int(selection) < 0 or int(selection)> len(auctions))):
+        if(selection and selection[0] == 'q'): return
+        clear()
+        input('Invalid Selection\n\nPress Enter to continue ')
+        clear()
+        for auction in auctions:
+            print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + auction['serial_number'] + '\n    Name: ' + auction['name'])
+        selection = input('\n' + 'Select auction to bid (enter q to exit): ')
+
+    auction = auctions[int(selection)-1]
+    clear()
+
+    value = input('\nInsert value to bid: ')
+    
+    while(not is_number(value)):
+        input('\n Invalid value!\n\nPress enter to continue')
+        value = input('\nInsert value to bid: ')
+
+    
+    r = requests.post(auction_repository_add + "/place_bid", data = {
+        'user' : get_user(),
+        'serial_number' : auction['serial_number'],
+        'value': value
+    })
+    input(r.text + '\n\nPress enter to continue')
+    return
     #todo
 
 def get_auctions():
@@ -104,7 +190,7 @@ create_auction_item = FunctionItem("Create Auction", create_auction)
 create_test_auction_item = FunctionItem("Create Test Auction", create_test_auction)
 get_auctions_item = FunctionItem("Get Auctions", get_auctions)
 close_auction = FunctionItem("Close Auction", close_auction)
-bid_item = FunctionItem("Place Bid", bid)
+bid_item = FunctionItem("Place Bid", place_bid)
 
 
 menu.append_item(function_item)

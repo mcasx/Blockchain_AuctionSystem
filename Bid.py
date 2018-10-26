@@ -1,4 +1,4 @@
-class Bid:
+class Bid(object):
     def __init__(self, user, value, bid_hash):
         self.user = user
         self.value = value

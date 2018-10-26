@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import threading
 import uuid
 import json
+import hashlib
 
 app = Flask(__name__)
 auctions = []
@@ -52,22 +53,34 @@ def create_test_auction():
     return json.dumps(auctions[-1].__dict__, indent=4, default=str)
     
 
-@app.route("/bid", methods=['POST'])
-def bid():
+@app.route("/place_bid", methods=['POST'])
+def place_bid():
     serial_number = request.form['serial_number']
-    print(serial_number)
     auction = get_auction(serial_number)
     if auction == None: return "Auction does not exist"
     if auction.state == "Closed": return "Bid refused"
     user = request.form['user']
     value = request.form['value']
-    
-    return "Bid added" if auction.add_bid(user, value) else "Bid refused"
+    if auction.bids:
+        m = hashlib.sha256()
+        m.update(auction.get_last_bid().__dict__)
+        prev_hash = m.digest()
+        return "Bid added" if auction.add_bid(user, value, prev_hash) else "Bid refused"
+    else:
+        return "Bid added" if auction.add_bid(user, value, None) else "Bid refused"
+
+@app.route('/get_last_auction_bid', methods=['GET'])
+def get_last_auction_bid():
+    serial_number = request.args.get('serial_number')
+    auction = get_auction(serial_number)
+    if not auction:
+        return 'Auction does not exist'
+    return json.dumps(auction.get_last_bid())
+
 
 @app.route('/get_open_user_auctions', methods=['GET'])
 def get_open_user_auctions():
     return str(json.dumps([x.__dict__ for x in [y for y in auctions if (y.state == 'Open' and y.creator == request.args.get('user'))]], indent=4, default=str))
-
 
 
 @app.route("/close_auction", methods=['POST'])
@@ -80,17 +93,15 @@ def close_auction():
     return "Auction closed"
 
 
+def get_auction(serial_number):
+    for a in auctions:
+        if a.serial_number == serial_number: return a
+    return None
+
+
 @app.route("/get_auctions", methods=['GET'])
 def get_auctions():
     return str(json.dumps([x.__dict__ for x in auctions], indent=4, default=str))
 
-def get_auction(serial_number):
-    for a in auctions:
-        if a.serial_number == serial_number: return a.serial_number
-    return None
-
-
-
 if __name__ == "__main__":
-
     app.run(host='0.0.0.0', port=3000)
