@@ -3,7 +3,7 @@
 # Locality Name: Aveiro
 # Organization Name: UA
 # Organizational Unit: DETI
-# Common Name: Auction Repository
+# Common Name: 127.0.0.1
 # Email address: manuelxarez@ua.pt
 openssl req -newkey rsa:2048 -keyout key.pem -x509 -days 365 -out certificate.pem
 
