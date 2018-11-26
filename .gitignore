@@ -1,4 +1,10 @@
 *
+!Repository/
+!Repository/SSL/
+!Manager/
+!Manager/SSL/
+!Client/
+!Client/SSL/
 !*.py
 !*.json
 !Repository/*.py
