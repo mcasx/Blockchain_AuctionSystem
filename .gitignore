@@ -1,2 +1,14 @@
-__pycache__/
-serialNumber
+*
+!*.py
+!*.json
+!Repository/*.py
+!Repository/*.json
+!Repository/SSL/*.pem
+!Repository/SSL/*.sh
+!Manager/*.py
+!Manager/*.json
+!Manager/SSL/*.pem
+!Manager/SSL/*.sh
+!Client/*.py
+!Client/*.json
+!Client/SSL/*.pem
