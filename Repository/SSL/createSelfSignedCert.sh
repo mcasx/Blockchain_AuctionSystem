@@ -6,3 +6,6 @@
 # Common Name: Auction Repository
 # Email address: manuelxarez@ua.pt
 openssl req -newkey rsa:2048 -keyout key.pem -x509 -days 365 -out certificate.pem
+
+#Create public key
+openssl x509 -pubkey -in certificate.pem -out public.pem

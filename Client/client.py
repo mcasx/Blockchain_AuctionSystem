@@ -57,7 +57,7 @@ def create_auction():
         clear()
         creator = get_user()
 
-        r = requests.post(auction_manager_add + "/createAuction", data={'name': name_of_auction, 'description': description, 'timeLimit': time_limit, 'auctionType': auction_type, 'creator' : creator})
+        r = s.post(auction_manager_add + "/createAuction", data={'name': name_of_auction, 'description': description, 'timeLimit': time_limit, 'auctionType': auction_type, 'creator' : creator})
         return r.text
     except ConnectionError:
         clear()
@@ -74,7 +74,7 @@ def create_test_auction():
     auction_type = "English Auction"
     clear()
     creator = get_user()
-    r = requests.post(auction_manager_add + "/createAuction", data={
+    r = s.post(auction_manager_add + "/createAuction", data={
         'name': name_of_auction, 
         'description': description, 
         'timeLimit': time_limit, 
@@ -86,7 +86,7 @@ def create_test_auction():
     
 def close_auction():
     params = {'user':get_user()}
-    r = requests.get(auction_repository_add + "/get_open_user_auctions", params=params) 
+    r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
     auctions = json.loads(r.text)
     
     if not auctions:
@@ -106,7 +106,7 @@ def close_auction():
             print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
         selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
     
-    r = requests.post(auction_repository_add + '/close_auction', data = {
+    r = s.post(auction_repository_add + '/close_auction', data = {
         'serial_number' : auctions[int(selection)-1]['serial_number']
     })
     input('\n' + r.text + '\n\nPress Enter to continue')
@@ -115,7 +115,7 @@ def close_auction():
 
 def place_bid():
     params = {'user':get_user()}
-    r = requests.get(auction_repository_add + "/get_open_user_auctions", params=params) 
+    r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
     auctions = json.loads(r.text)
     
     if not auctions:
@@ -148,7 +148,7 @@ def place_bid():
         value = input('\nInsert value to bid: ')
 
     
-    r = requests.post(auction_repository_add + "/place_bid", data = {
+    r = s.post(auction_repository_add + "/place_bid", data = {
         'user' : get_user(),
         'serial_number' : auction['serial_number'],
         'value': value
@@ -158,8 +158,7 @@ def place_bid():
     #todo
 
 def get_auctions():
-    
-    r = requests.get(auction_repository_add + "/get_auctions")
+    r = s.get(auction_repository_add + "/get_auctions")
     auctions = json.loads(r.text)
     if auctions == []: 
         input('No auctions in the repository\n\nPress Enter to continue')
@@ -176,7 +175,7 @@ def get_auctions():
 
 if __name__ == "__main__":
     s = requests.Session()
-    s.verify = "ssl/certificates.pem"
+    s.verify = "SSL/certificates.pem"
     
     menu = ConsoleMenu("Auction Client")
     clear = lambda: os.system('clear')
