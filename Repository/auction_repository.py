@@ -1,13 +1,13 @@
 from Auction import auction
 from flask import Flask,request
 import pickle
-import datetime
 from datetime import datetime, timedelta
 import threading
 import uuid
 import json
 import hashlib
 import ssl
+import requests
 
 app = Flask(__name__)
 auctions = []
@@ -78,6 +78,13 @@ def get_last_auction_bid():
         return 'Auction does not exist'
     return json.dumps(auction.get_last_bid())
 
+@app.route('/get_last_auction_block', methods=['GET'])
+def get_last_auction_block():
+    serial_number = request.args.get('serial_number')
+    auction = get_auction(serial_number)
+    if not auction:
+        return 'Auction does not exist'
+    return pickle.dumps(auction.get_last_block())
 
 @app.route('/get_open_user_auctions', methods=['GET'])
 def get_open_user_auctions():
@@ -105,7 +112,7 @@ def get_auctions():
     return str(json.dumps([x.__dict__ for x in auctions], indent=4, default=str))
 
 if __name__ == "__main__":
-    s = request.Session()
+    s = requests.Session()
     s.verify = "SSL/certificates.pem"
 
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
