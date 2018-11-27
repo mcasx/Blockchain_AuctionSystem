@@ -105,6 +105,9 @@ def get_auctions():
     return str(json.dumps([x.__dict__ for x in auctions], indent=4, default=str))
 
 if __name__ == "__main__":
+    s = request.Session()
+    s.verify = "SSL/certificates.pem"
+
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
     #Should prompt OpenSSL to ask for password
     context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem')

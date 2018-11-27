@@ -30,7 +30,7 @@ def createAuction():
     f.write(str(serialNumber + 1))
     f.close()
 
-    r = requests.post(auction_repository_ip + "/create_auction", data={'serialNumber': serialNumber, 'name': name, 'timeLimit': timeLimit, 'description': description, 'auctionType': auctionType, 'creator' : creator})
+    r = s.post(auction_repository_ip + "/create_auction", data={'serialNumber': serialNumber, 'name': name, 'timeLimit': timeLimit, 'description': description, 'auctionType': auctionType, 'creator' : creator})
     return "Auction " + str(serialNumber) + " created\n"
 
 def closeAuction(user, serialNumber):
@@ -40,6 +40,9 @@ def validateBid(bid):
     return
 
 if __name__ == "__main__":
+    s = request.Session()
+    s.verify = "SSL/certificates.pem"
+
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
     #Should prompt OpenSSL to ask for password
     context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem')
