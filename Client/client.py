@@ -9,6 +9,9 @@ import pickle
 from requests.exceptions import ConnectionError
 import urllib3
 from Bid import Bid
+from Block import Block
+import codecs
+
 urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 
 class bcolors:
@@ -162,12 +165,15 @@ def place_bid():
 
     bid = Bid(get_user(), value)
 
-    
+    block.mine(2)
 
+    new_block = Block(bid, block.hash().hexdigest())
+    
     r = s.post(auction_repository_add + "/place_bid", data = {
-        'user' : get_user(),
-        'serial_number' : auction['serial_number'],
-        'value': value
+        'serial_number' : auction,
+        #'block' : codecs.encode(pickle.dumps(new_block), "base64").decode()
+        'block' : pickle.dumps(new_block).decode(),
+        'nonce' : block.nonce
     })
     input(r.text + '\n\nPress enter to continue')
     return

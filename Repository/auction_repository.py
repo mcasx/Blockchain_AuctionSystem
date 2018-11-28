@@ -8,6 +8,8 @@ import json
 import hashlib
 import ssl
 import requests
+import base64
+import codecs
 
 app = Flask(__name__)
 auctions = []
@@ -59,16 +61,20 @@ def place_bid():
     serial_number = request.form['serial_number']
     auction = get_auction(serial_number)
     if auction == None: return "Auction does not exist"
-    if auction.state == "Closed": return "Bid refused"
-    user = request.form['user']
-    value = request.form['value']
-    if auction.bids:
-        m = hashlib.sha256()
-        m.update(auction.get_last_bid().__dict__)
-        prev_hash = m.digest()
-        return "Bid added" if auction.add_bid(user, value, prev_hash) else "Bid refused"
-    else:
-        return "Bid added" if auction.add_bid(user, value, None) else "Bid refused"
+    if auction.state == "Closed": return "Bid refused"    
+
+
+    block = pickle.loads(request.form['block'].decode())
+    
+    nonce = request.form['nonce']
+    user = block.bid.user
+    value = block.bid.value
+    
+    if auction.blocks[-1].verifyNonce(nonce, auction.chalenge):
+        auction.add_block(block)
+        return "Bid added"
+    return "Bid refused"
+    
 
 @app.route('/get_last_auction_bid', methods=['GET'])
 def get_last_auction_bid():
