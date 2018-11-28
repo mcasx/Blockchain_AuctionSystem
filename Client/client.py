@@ -14,6 +14,12 @@ import codecs
 
 urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 
+from PyKCS11 import *
+from OpenSSL import crypto
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+import getpass
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -41,8 +47,34 @@ def is_number(s):
 def hello():
     input("hello")
 
-def get_user():
-    return "Hello my name is Jeff"
+def getUserAuthInfo():
+    userInfo = {"BI": None, "Certificate": None, "Signature": None}
+    lib = '/usr/lib/opensc-pkcs11.so'
+    pkcs11 = PyKCS11.PyKCS11Lib()
+    pkcs11.load(lib)
+    slots = pkcs11.getSlotList()
+
+    for slot in slots:
+        if 'Auth PIN (CARTAO DE CIDADAO)' in pkcs11.getTokenInfo(slot).label:
+            session = pkcs11.openSession(slot)
+            objects = session.findObjects()
+            PIN = getpass.getpass('CC PIN: ')
+            session.login(PIN)
+
+            certHandle = session.findObjects([(CKA_CLASS, CKO_CERTIFICATE), (CKA_LABEL, 'CITIZEN AUTHENTICATION CERTIFICATE')])[0]
+
+            privKeyHandle = session.findObjects([(CKA_CLASS, CKO_PRIVATE_KEY), (CKA_LABEL, 'CITIZEN AUTHENTICATION KEY')])[0]
+            
+            userInfo["Certificate"] = bytes(session.getAttributeValue(certHandle, [CKA_VALUE], allAsBinary=True)[0])
+            cert = crypto.load_certificate(crypto.FILETYPE_ASN1,cert)
+            
+            userInfo["BI"] = [x[1] for x in cert.get_subject().get_components() if "serialNumber" in str(x[0])][0].decode("utf-8")
+
+            userInfo["Signature"] = bytes(session.sign(privKeyHandle, BI, Mechanism(CKM_SHA1_RSA_PKCS)))
+            
+            session.closeSession
+
+    return userInfo
 
 def create_auction():
     try:
@@ -62,7 +94,7 @@ def create_auction():
         auction_type = input("Auction type:\n   · 1 - English Auction\n   · 2 - Blind Auction\n     --> ")
         auction_type = "English Auction" if auction_type == "1" else "Blind Auction"
         clear()
-        creator = get_user()
+        creator = getUserAuthInfo()
 
         r = s.post(auction_manager_add + "/createAuction", data={'name': name_of_auction, 'description': description, 'timeLimit': time_limit, 'auctionType': auction_type, 'creator' : creator})
         return r.text
@@ -121,7 +153,7 @@ def close_auction():
     #todo
 
 def place_bid():
-    params = {'user':get_user()}
+    params = {'user':getUserAuthInfo()}
     r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
     auctions = json.loads(r.text)
     
@@ -225,3 +257,5 @@ if __name__ == "__main__":
     menu.append_item(bid_item)
 
     menu.show()
+
+
