@@ -1,11 +1,18 @@
+import json
+import os
+from datetime import datetime
+from random import randint
+import requests
 from consolemenu import *
 from consolemenu.items import *
-from datetime import datetime
+import pickle
 from requests.exceptions import ConnectionError
-import requests
-import os
-import json 
-from random import randint
+import urllib3
+from Bid import Bid
+from Block import Block
+import codecs
+
+urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 
 from PyKCS11 import *
 from OpenSSL import crypto
@@ -16,7 +23,7 @@ import getpass
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
+    OKGREEN = '\033[92m' 
     WARNING = '\033[93m'
     FAIL = '\033[91m'
     ENDC = '\033[0m'
@@ -170,8 +177,15 @@ def place_bid():
             print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + auction['serial_number'] + '\n    Name: ' + auction['name'])
         selection = input('\n' + 'Select auction to bid (enter q to exit): ')
 
-    auction = auctions[int(selection)-1]
+    auction = auctions[int(selection)-1]['serial_number']
+
     clear()
+
+    params = {'serial_number':auction}
+    r = s.get(auction_repository_add + "/get_last_auction_block", params=params) 
+
+    block = pickle.loads(r.content)
+    input(block)
 
     value = input('\nInsert value to bid: ')
     
@@ -179,11 +193,19 @@ def place_bid():
         input('\n Invalid value!\n\nPress enter to continue')
         value = input('\nInsert value to bid: ')
 
+    value = float(value)
+
+    bid = Bid(get_user(), value)
+
+    block.mine(2)
+
+    new_block = Block(bid, block.hash().hexdigest())
     
     r = s.post(auction_repository_add + "/place_bid", data = {
-        'user' : get_user(),
-        'serial_number' : auction['serial_number'],
-        'value': value
+        'serial_number' : auction,
+        #'block' : codecs.encode(pickle.dumps(new_block), "base64").decode()
+        'block' : pickle.dumps(new_block).decode(),
+        'nonce' : block.nonce
     })
     input(r.text + '\n\nPress enter to continue')
     return
@@ -208,7 +230,7 @@ def get_auctions():
 if __name__ == "__main__":
     s = requests.Session()
     s.verify = "SSL/certificates.pem"
-    
+     
     menu = ConsoleMenu("Auction Client")
     clear = lambda: os.system('clear')
 

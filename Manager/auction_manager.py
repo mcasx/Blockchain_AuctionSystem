@@ -40,7 +40,7 @@ def validateBid(bid):
     return
 
 if __name__ == "__main__":
-    s = request.Session()
+    s = requests.Session()
     s.verify = "SSL/certificates.pem"
 
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)

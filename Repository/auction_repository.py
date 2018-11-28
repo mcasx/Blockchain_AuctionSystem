@@ -1,13 +1,15 @@
 from Auction import auction
 from flask import Flask,request
 import pickle
-import datetime
 from datetime import datetime, timedelta
 import threading
 import uuid
 import json
 import hashlib
 import ssl
+import requests
+import base64
+import codecs
 
 app = Flask(__name__)
 auctions = []
@@ -59,16 +61,20 @@ def place_bid():
     serial_number = request.form['serial_number']
     auction = get_auction(serial_number)
     if auction == None: return "Auction does not exist"
-    if auction.state == "Closed": return "Bid refused"
-    user = request.form['user']
-    value = request.form['value']
-    if auction.bids:
-        m = hashlib.sha256()
-        m.update(auction.get_last_bid().__dict__)
-        prev_hash = m.digest()
-        return "Bid added" if auction.add_bid(user, value, prev_hash) else "Bid refused"
-    else:
-        return "Bid added" if auction.add_bid(user, value, None) else "Bid refused"
+    if auction.state == "Closed": return "Bid refused"    
+
+
+    block = pickle.loads(request.form['block'].decode())
+    
+    nonce = request.form['nonce']
+    user = block.bid.user
+    value = block.bid.value
+    
+    if auction.blocks[-1].verifyNonce(nonce, auction.chalenge):
+        auction.add_block(block)
+        return "Bid added"
+    return "Bid refused"
+    
 
 @app.route('/get_last_auction_bid', methods=['GET'])
 def get_last_auction_bid():
@@ -78,6 +84,13 @@ def get_last_auction_bid():
         return 'Auction does not exist'
     return json.dumps(auction.get_last_bid())
 
+@app.route('/get_last_auction_block', methods=['GET'])
+def get_last_auction_block():
+    serial_number = request.args.get('serial_number')
+    auction = get_auction(serial_number)
+    if not auction:
+        return 'Auction does not exist'
+    return pickle.dumps(auction.get_last_block())
 
 @app.route('/get_open_user_auctions', methods=['GET'])
 def get_open_user_auctions():
@@ -105,7 +118,7 @@ def get_auctions():
     return str(json.dumps([x.__dict__ for x in auctions], indent=4, default=str))
 
 if __name__ == "__main__":
-    s = request.Session()
+    s = requests.Session()
     s.verify = "SSL/certificates.pem"
 
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)

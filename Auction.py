@@ -1,4 +1,5 @@
 from Bid import Bid
+from Block import Block
 
 class auction(object):
     def __init__(self, name, serial_number, time_limit, description, auction_type, creator, rules = None):
@@ -8,10 +9,11 @@ class auction(object):
         self.description = description
         self.auction_type = auction_type
         self.creator = creator
-        self.bids = []
+        self.blocks = [Block()]
         self.rules = rules
         self.state = "Open"
-        
+        self.chalenge = 1
+    ''' 
     def add_bid(self, user, value, hash_value):
         
         if self.rules:
@@ -25,8 +27,16 @@ class auction(object):
         else:
             self.bids.append(Bid(user, value, hash_value))
             return True
+    
     def get_last_bid(self):
         return self.bids[-1] if self.bids else None
+    '''
+
+    def add_block(self, block):
+        self.blocks.append(block)
+
+    def get_last_block(self):
+        return self.blocks[-1] if self.blocks else None
 
     def close(self):
         self.state = "Closed"
