@@ -59,11 +59,11 @@ def getUserAuthInfo():
             privKeyHandle = session.findObjects([(CKA_CLASS, CKO_PRIVATE_KEY), (CKA_LABEL, 'CITIZEN AUTHENTICATION KEY')])[0]
             
             userInfo["Certificate"] = bytes(session.getAttributeValue(certHandle, [CKA_VALUE], allAsBinary=True)[0])
-            cert = crypto.load_certificate(crypto.FILETYPE_ASN1,cert)
+            cert = crypto.load_certificate(crypto.FILETYPE_ASN1,userInfo["Certificate"])
             
             userInfo["BI"] = [x[1] for x in cert.get_subject().get_components() if "serialNumber" in str(x[0])][0].decode("utf-8")
 
-            userInfo["Signature"] = bytes(session.sign(privKeyHandle, BI, Mechanism(CKM_SHA1_RSA_PKCS)))
+            userInfo["Signature"] = bytes(session.sign(privKeyHandle, userInfo["BI"], Mechanism(CKM_SHA1_RSA_PKCS)))
             
             session.closeSession
 
