@@ -233,7 +233,7 @@ def place_bid():
     response = json.loads(r.text)
 
     if isinstance(response, tuple):
-        receipts.append(response(1))
+        receipts.append({'auction': auction, 'block': new_block, 'receipt':response(1))
         response = response(0)
 
     input(response + '\n\nPress enter to continue')
