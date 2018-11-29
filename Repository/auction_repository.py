@@ -14,6 +14,11 @@ import codecs
 
 app = Flask(__name__)
 auctions = []
+with open('addresses.json', 'r') as myfile:
+    addresses = json.load(myfile)
+
+auction_manager_add = addresses['manager']
+auction_repository_add = addresses['repository']
 
 @app.route("/")
 def hello():
@@ -67,10 +72,13 @@ def place_bid():
     block = get_block_from_dict(json.loads(request.form['block']))
     
     nonce = request.form['nonce']
-    user = block.bid.user
-    value = block.bid.value
-    user_info = json.loads(request.form['nonce'])
 
+    r = s.post(auction_manager_add + '/verify_user', data = {
+        'user_data' : request.form['user_data']
+    })
+
+    if r.text == 'False':
+        return "User authentication Failed"
 
     if auction.blocks[-1].verifyNonce(nonce, auction.chalenge):
         auction.add_block(block)

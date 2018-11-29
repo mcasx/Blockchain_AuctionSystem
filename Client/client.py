@@ -58,7 +58,6 @@ def checkReceipt(receipt, block):
     raise crypto.Error:
         print("Receipt is invalid")
         return False
-        
     return True
     
 def get_user():
