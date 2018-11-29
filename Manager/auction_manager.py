@@ -36,8 +36,34 @@ def createAuction():
 def closeAuction(user, serialNumber):
     return    
 
-def validateBid(bid):
-    return
+def verifyCert(cert):
+    files = ["CCCerts/" + f for f in listdir('CCCerts') if isfile(join('CCCerts', f))]
+    trusted_certs = [ crypto.load_certificate(crypto.FILETYPE_PEM, open(x, 'r').read()) for x in files ]
+    store = crypto.X509Store()
+    for trusted_cert in trusted_certs:
+        store.add_cert(trusted_cert)
+
+    store_ctx = crypto.X509StoreContext(store, certificate)
+    try:
+        result = store_ctx.verify_certificate()
+    except crypto.X509StoreContextError:
+        return false
+    return true
+
+def confirmSignature(BI, cert, signature):
+    certificate = crypto.load_certificate(crypto.FILETYPE_ASN1, cert)
+    if not verifyCert(certificate):
+        print("Certificate is not valid.")
+        return false
+
+    try:
+        crypto.verify(certificate, signature, BI, 'RSA-SHA1')
+    except crypto.Error:
+        print("Signature is not valid")
+        return false
+
+    return true
+        
 
 if __name__ == "__main__":
     s = requests.Session()

@@ -3,6 +3,7 @@
 !Repository/SSL/
 !Manager/
 !Manager/SSL/
+!Manager/CCCerts
 !Client/
 !Client/SSL/
 !*.py
@@ -15,6 +16,7 @@
 !Manager/*.json
 !Manager/SSL/*.pem
 !Manager/SSL/*.sh
+!Manager/CCCerts/*.crt
 !Client/*.py
 !Client/*.json
 !Client/SSL/*.pem
