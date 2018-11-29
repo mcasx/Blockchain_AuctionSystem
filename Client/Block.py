@@ -1,12 +1,13 @@
 import hashlib
 from Bid import Bid
 import json
+import random
 
 class Block(object):
     def __init__(self, bid = None, prev_signature = None, nonce = 0):
         self.bid = bid
         self.prev_signature = prev_signature
-        self.nonce = nonce
+        self.nonce = int(random.getrandbits(128)) if bid is None else nonce
 
     def hash(self):
         

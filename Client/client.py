@@ -22,6 +22,8 @@ from cryptography.hazmat.backends import default_backend
 import getpass
 import pem
 
+receipts = []
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -227,7 +229,14 @@ def place_bid():
         'block' : new_block.get_json_block(),
         'nonce' : block.nonce
     })
-    input(r.text + '\n\nPress enter to continue')
+
+    response = json.loads(r.text)
+
+    if isinstance(response, tuple):
+        receipts.append(response(1))
+        response = response(0)
+
+    input(response + '\n\nPress enter to continue')
     return
     #todo
 

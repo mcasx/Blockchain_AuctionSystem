@@ -71,8 +71,8 @@ def create_test_auction():
 def place_bid():
     serial_number = request.form['serial_number']
     auction = get_auction(serial_number)
-    if auction == None: return "Auction does not exist"
-    if auction.state == "Closed": return "Bid refused"    
+    if auction == None: return json.dumps("Auction does not exist")
+    if auction.state == "Closed": return json.dumps("Bid refused")
 
     block = get_block_from_dict(json.loads(request.form['block']))
     
@@ -83,11 +83,12 @@ def place_bid():
     })
 
     if r.text == 'False':
-        return "User authentication Failed"
+        return json.dumps("User authentication Failed")
 
     if auction.blocks[-1].verifyNonce(nonce, auction.chalenge):
         auction.add_block(block)
-        return "Bid added"
+        receipt = createReceipt(block)
+        return json.dumps(("Bid added",receipt)) 
     return "Bid refused"
     
 
