@@ -49,7 +49,7 @@ def hello():
 
 def getUserAuthInfo():
     userInfo = {"BI": None, "Certificate": None, "Signature": None}
-    lib = '/usr/lib/opensc-pkcs11.so'
+    lib = 'opensc-pkcs11.so'
     pkcs11 = PyKCS11.PyKCS11Lib()
     pkcs11.load(lib)
     slots = pkcs11.getSlotList()
