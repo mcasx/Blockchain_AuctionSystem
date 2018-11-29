@@ -20,6 +20,7 @@ from OpenSSL import crypto
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 import getpass
+import pem
 
 class bcolors:
     HEADER = '\033[95m'
@@ -48,6 +49,18 @@ def is_number(s):
 def hello():
     input("hello")
 
+def checkReceipt(receipt, block):
+    certs = pem.parse_file("SSL/certificates.pem")
+    #Second cert is Repository which is the one we want here
+    cert = certs[1]
+    try:
+        crypto.verify(cert, receipt, block, "RSA-SHA1")
+    raise crypto.Error:
+        print("Receipt is invalid")
+        return False
+        
+    return True
+    
 def get_user():
     return 'Jeff'
 
