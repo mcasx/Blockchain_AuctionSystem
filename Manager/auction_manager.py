@@ -50,12 +50,13 @@ def verifyCert(cert):
         return false
     return true
 
-def confirmSignature(BI, cert, signature):
+def confirmSignature(cert, signature):
     certificate = crypto.load_certificate(crypto.FILETYPE_ASN1, cert)
     if not verifyCert(certificate):
         print("Certificate is not valid.")
         return false
 
+    BI = [x[1] for x in certificate.get_subject().get_components() if "serialNumber" in str(x[0])][0].decode("utf-8")
     try:
         crypto.verify(certificate, signature, BI, 'RSA-SHA1')
     except crypto.Error:

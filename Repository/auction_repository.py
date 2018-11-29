@@ -14,6 +14,11 @@ import codecs
 app = Flask(__name__)
 auctions = []
 
+def createReceipt(block):
+    privKey = crypto.load_privatekey(crypto.FILETYPE_PEM, open("SSL/key.pem", 'r').read())
+    receipt = crypto.sign(privKey, block, 'RSA-SHA1')
+    return receipt
+
 @app.route("/")
 def hello():
     return "Hey "
