@@ -47,6 +47,9 @@ def is_number(s):
 def hello():
     input("hello")
 
+def get_user():
+    return 'Jeff'
+
 def getUserAuthInfo():
     userInfo = {"BI": None, "Certificate": None, "Signature": None}
     lib = '/usr/lib/opensc-pkcs11.so'
@@ -57,7 +60,6 @@ def getUserAuthInfo():
     for slot in slots:
         if 'Auth PIN (CARTAO DE CIDADAO)' in pkcs11.getTokenInfo(slot).label:
             session = pkcs11.openSession(slot)
-            objects = session.findObjects()
             PIN = getpass.getpass('CC PIN: ')
             session.login(PIN)
 
@@ -153,7 +155,7 @@ def close_auction():
     #todo
 
 def place_bid():
-    params = {'user':getUserAuthInfo()}
+    params = {'user':get_user()}
     r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
     auctions = json.loads(r.text)
     
@@ -173,8 +175,10 @@ def place_bid():
         clear()
         input('Invalid Selection\n\nPress Enter to continue ')
         clear()
+        i = 1
         for auction in auctions:
             print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + auction['serial_number'] + '\n    Name: ' + auction['name'])
+            i += 1
         selection = input('\n' + 'Select auction to bid (enter q to exit): ')
 
     auction = auctions[int(selection)-1]['serial_number']
@@ -204,7 +208,7 @@ def place_bid():
     r = s.post(auction_repository_add + "/place_bid", data = {
         'serial_number' : auction,
         #'block' : codecs.encode(pickle.dumps(new_block), "base64").decode()
-        'block' : pickle.dumps(new_block).decode(),
+        'block' : pickle.dumps(new_block),
         'nonce' : block.nonce
     })
     input(r.text + '\n\nPress enter to continue')
