@@ -9,8 +9,9 @@ import pickle
 from requests.exceptions import ConnectionError
 import urllib3
 from Bid import Bid
-from Block import Block
+from Block import Block, get_block_from_dict
 import codecs
+
 
 urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 
@@ -57,7 +58,6 @@ def checkReceipt(receipt, block):
     raise crypto.Error:
         print("Receipt is invalid")
         return False
-        
     return True
     
 def get_user():
@@ -199,10 +199,11 @@ def place_bid():
     clear()
 
     params = {'serial_number':auction}
-    r = s.get(auction_repository_add + "/get_last_auction_block", params=params) 
 
-    block = pickle.loads(r.content)
-    input(block)
+    r = s.get(auction_repository_add + "/get_last_auction_block", params=params) 
+    
+    input(r.text)
+    block = get_block_from_dict(json.loads(r.content))
 
     value = input('\nInsert value to bid: ')
     
@@ -212,7 +213,9 @@ def place_bid():
 
     value = float(value)
 
-    bid = Bid(get_user(), value)
+    user_info = getUserAuthInfo()
+
+    bid = Bid(user_info['BI'], value)
 
     block.mine(2)
 
@@ -220,8 +223,8 @@ def place_bid():
     
     r = s.post(auction_repository_add + "/place_bid", data = {
         'serial_number' : auction,
-        #'block' : codecs.encode(pickle.dumps(new_block), "base64").decode()
-        'block' : pickle.dumps(new_block),
+        'user' : json.dumps(user_info),
+        'block' : new_block.get_json_block(),
         'nonce' : block.nonce
     })
     input(r.text + '\n\nPress enter to continue')

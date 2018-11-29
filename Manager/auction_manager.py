@@ -33,6 +33,11 @@ def createAuction():
     r = s.post(auction_repository_ip + "/create_auction", data={'serialNumber': serialNumber, 'name': name, 'timeLimit': timeLimit, 'description': description, 'auctionType': auctionType, 'creator' : creator})
     return "Auction " + str(serialNumber) + " created\n"
 
+@app.route('/verify_user', methods = ['POST'])
+def verify_user():
+    user_data = json.loads(request.form['user_data'])
+    return confirmSignature(user_data['BI'], user_data['Certificate'], user_data['Signature'])
+
 def closeAuction(user, serialNumber):
     return    
 
@@ -65,6 +70,8 @@ def confirmSignature(cert, signature):
 
     return true
         
+
+
 
 if __name__ == "__main__":
     s = requests.Session()

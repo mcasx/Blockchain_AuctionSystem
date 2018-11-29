@@ -13,24 +13,7 @@ class auction(object):
         self.rules = rules
         self.state = "Open"
         self.chalenge = 1
-    ''' 
-    def add_bid(self, user, value, hash_value):
-        
-        if self.rules:
-            if self.rules(self, user, value):
-                if self.auction_type == 'English Auction' and value <= self.get_last_bid().value:
-                    return False
-                self.bids.append(Bid(user, value, None) if not self.bids else Bid(user, value, hash_value))
-                return True
-            else:
-                return False
-        else:
-            self.bids.append(Bid(user, value, hash_value))
-            return True
-    
-    def get_last_bid(self):
-        return self.bids[-1] if self.bids else None
-    '''
+
 
     def add_block(self, block):
         self.blocks.append(block)
