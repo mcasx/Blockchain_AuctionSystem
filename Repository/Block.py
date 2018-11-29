@@ -1,10 +1,12 @@
 import hashlib
+from Bid import Bid
+import json
 
 class Block(object):
-    def __init__(self, bid = None, prev_signature = None):
+    def __init__(self, bid = None, prev_signature = None, nonce = 0):
         self.bid = bid
         self.prev_signature = prev_signature
-        self.nonce = 0
+        self.nonce = nonce
 
     def hash(self):
         
@@ -34,3 +36,12 @@ class Block(object):
         else:
             self.nonce = 0
         return False
+
+    def get_json_block(self):
+        return json.dumps(Block().__dict__) if self.bid is None else json.dumps(Block(self.bid.__dict__, self.prev_signature, self.nonce).__dict__)
+
+def get_block_from_dict(block):
+    return Block() if block['bid'] is None\
+        else Block(Bid(block['bid']['user'], float(block['bid']['value']), block['bid']['timeStamp']), block['prev_signature'])
+
+    

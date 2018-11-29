@@ -2,6 +2,7 @@ from Auction import auction
 from flask import Flask,request
 import pickle
 from datetime import datetime, timedelta
+from Block import Block, get_block_from_dict
 import threading
 import uuid
 import json
@@ -63,13 +64,14 @@ def place_bid():
     if auction == None: return "Auction does not exist"
     if auction.state == "Closed": return "Bid refused"    
 
-
-    block = pickle.loads(request.form['block'].decode())
+    block = get_block_from_dict(json.loads(request.form['block']))
     
     nonce = request.form['nonce']
     user = block.bid.user
     value = block.bid.value
-    
+    user_info = json.loads(request.form['nonce'])
+
+
     if auction.blocks[-1].verifyNonce(nonce, auction.chalenge):
         auction.add_block(block)
         return "Bid added"
@@ -90,7 +92,7 @@ def get_last_auction_block():
     auction = get_auction(serial_number)
     if not auction:
         return 'Auction does not exist'
-    return pickle.dumps(auction.get_last_block())
+    return auction.get_last_block().get_json_block()
 
 @app.route('/get_open_user_auctions', methods=['GET'])
 def get_open_user_auctions():
@@ -120,7 +122,7 @@ def get_auctions():
 if __name__ == "__main__":
     s = requests.Session()
     s.verify = "SSL/certificates.pem"
-
+    
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
     #Should prompt OpenSSL to ask for password
     context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem')
