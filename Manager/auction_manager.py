@@ -8,6 +8,9 @@ from os import listdir
 from os.path import isfile, join
 from PyKCS11 import ckbytelist, PyKCS11Error
 
+#PEM_pass = getpass('PEM Passphrase: ')
+PEM_pass = '12345'
+
 with open('addresses.json') as json_file:
     data = json.load(json_file)
     auction_repository_ip = data["repository"]
@@ -89,5 +92,5 @@ if __name__ == "__main__":
 
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
     #Should prompt OpenSSL to ask for password
-    context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem')
+    context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem', password = PEM_pass)
     app.run(host="127.0.0.1", port="5000", debug=True, ssl_context=context)

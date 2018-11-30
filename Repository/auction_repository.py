@@ -13,9 +13,15 @@ import base64
 import codecs
 import jsonpickle
 from OpenSSL import crypto
-
+from getpass import getpass
+ 
 app = Flask(__name__)
 auctions = []
+
+
+#PEM_pass = getpass('PEM Passphrase: ')
+PEM_pass = '12345'
+
 with open('../addresses.json', 'r') as myfile:
     addresses = json.load(myfile)
 
@@ -23,7 +29,7 @@ auction_manager_add = addresses['manager']
 auction_repository_add = addresses['repository']
 
 def createReceipt(block):
-    privKey = crypto.load_privatekey(crypto.FILETYPE_PEM, open("SSL/key.pem", 'r').read())
+    privKey = crypto.load_privatekey(crypto.FILETYPE_PEM, open("SSL/key.pem", 'r').read(), passphrase=PEM_pass.encode('utf-8'))
     receipt = crypto.sign(privKey, block.prev_signature, 'RSA-SHA1')
     return receipt
 
@@ -141,5 +147,5 @@ if __name__ == "__main__":
     
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
     #Should prompt OpenSSL to ask for password
-    context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem')
+    context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem', password = PEM_pass)
     app.run(host='127.0.0.1', port=3000, debug=True, ssl_context=context)
