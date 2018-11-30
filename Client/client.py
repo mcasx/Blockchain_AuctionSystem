@@ -215,11 +215,11 @@ def place_bid():
     params = {'serial_number':auction} 
     r = s.get(auction_repository_add + "/get_last_auction_block", params=params) 
     
-    block = get_block_from_dict(json.loads(r.content))
+    block = json.loads(r.content)
 
     value = input('\nInsert value to bid: ')
     
-    while(not is_number(value)):
+    while(not is_number(value) or float(block['value']) > float(value)):
         input('\n Invalid value!\n\nPress enter to continue')
         value = input('\nInsert value to bid: ')
 
@@ -229,7 +229,7 @@ def place_bid():
 
     bid = Bid(user_info['BI'], value)
 
-    new_block = Block(bid, block.hash().hexdigest())
+    new_block = Block(bid, block['hash'])
     
     new_block.mine(2)
 

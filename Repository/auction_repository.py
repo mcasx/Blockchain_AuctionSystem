@@ -114,7 +114,7 @@ def get_last_auction_block():
     auction = get_auction(serial_number)
     if not auction:
         return 'Auction does not exist'
-    return auction.get_last_block().get_json_block()
+    return json.dumps({'hash':auction.get_last_block().hash().hexdigest(), 'value': (auction.get_last_block().bid.value if not auction.get_last_block().bid is None else 0)}) 
 
 @app.route('/get_open_user_auctions', methods=['GET'])
 def get_open_user_auctions():
