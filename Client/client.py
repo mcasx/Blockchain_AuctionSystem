@@ -24,6 +24,9 @@ import pem
 
 receipts = []
 
+with open('user_info', 'rb') as mf:
+    user_info = pickle.load(mf)
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -60,6 +63,8 @@ def checkReceipt(receipt, block):
     return True
     
 def getUserAuthInfo():
+    if True:
+        return user_info
     userInfo = {"BI": None, "Certificate": None, "Signature": None}
     lib = 'opensc-pkcs11.so'
     pkcs11 = PyKCS11.PyKCS11Lib()
@@ -87,6 +92,7 @@ def getUserAuthInfo():
 
     return userInfo
 
+
 def create_auction():
     try:
         name_of_auction = input("Auction name --> ")
@@ -107,7 +113,12 @@ def create_auction():
         clear()
         creator = getUserAuthInfo()
 
-        r = s.post(auction_manager_add + "/createAuction", data={'name': name_of_auction, 'description': description, 'timeLimit': time_limit, 'auctionType': auction_type, 'creator' : json.dumps(creator)})
+        r = s.post(auction_manager_add + "/createAuction", data={
+            'name': name_of_auction, 
+            'description': description, 
+            'timeLimit': time_limit, 
+            'auctionType': auction_type, 
+            'creator' : json.dumps(creator)})
 
         clear()
         if "User not authenticated" in r.text:
@@ -121,8 +132,28 @@ def create_auction():
         print(bcolors.FAIL + 'Could not connect to Auction Manager\n\n' + bcolors.ENDC)
         input('Press enter to continue')
  
+def create_test_auction():
+    name_of_auction = "test name " + str(randint(1,100))
+    clear()
+    description = 'test description ' + str(randint(1,100))
+    clear()
+    time_limit = 'Jun 1 2020 1:33PM'
+    clear()
+    auction_type = "English Auction"
+    clear()
+    creator = getUserAuthInfo()
+    r = s.post(auction_manager_add + "/createAuction", data={
+        'name': name_of_auction, 
+        'description': description, 
+        'timeLimit': time_limit, 
+        'auctionType': auction_type, 
+        'creator' : json.dumps(creator)
+    })
+    input(r.text)
+    return 
+
 def close_auction():
-    params = {'user':get_user()}
+    params = {'user':getUserAuthInfo()}
     r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
     auctions = json.loads(r.text)
     
@@ -151,7 +182,7 @@ def close_auction():
     #todo
 
 def place_bid():
-    params = {'user':get_user()}
+    params = {'user':getUserAuthInfo()}
     r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
     auctions = json.loads(r.text)
     
@@ -184,7 +215,6 @@ def place_bid():
     params = {'serial_number':auction} 
     r = s.get(auction_repository_add + "/get_last_auction_block", params=params) 
     
-    input(r.text)
     block = get_block_from_dict(json.loads(r.content))
 
     value = input('\nInsert value to bid: ')
@@ -199,24 +229,25 @@ def place_bid():
 
     bid = Bid(user_info['BI'], value)
 
-    block.mine(2)
-
     new_block = Block(bid, block.hash().hexdigest())
     
+    new_block.mine(2)
+
     r = s.post(auction_repository_add + "/place_bid", data = {
         'serial_number' : auction,
-        'user' : json.dumps(user_info),
+        'user_data' : json.dumps(user_info),
         'block' : new_block.get_json_block(),
-        'nonce' : block.nonce
+        'nonce' : new_block.nonce
     })
 
+    
     response = json.loads(r.text)
 
-    if isinstance(response, tuple):
-        receipts.append({'auction': auction, 'block': new_block, 'receipt':response(1)})
-        response = response(0)
 
-    input(response + '\n\nPress enter to continue')
+    if isinstance(response, tuple):
+        receipts.append({'auction': auction, 'block': new_block, 'receipt':bytes(response[1])})
+
+    input(response[0] + '\n\nPress enter to continue')
     return
     #todo
 
@@ -236,6 +267,7 @@ def get_auctions():
         if cnt_str and cnt_str == 'n': return
     
 
+
 if __name__ == "__main__":
     s = requests.Session()
     s.verify = "SSL/certificates.pem"
@@ -251,12 +283,13 @@ if __name__ == "__main__":
 
 
     create_auction_item = FunctionItem("Create Auction", create_auction)
+    create_test_auction_item = FunctionItem("Create Test Auction", create_test_auction)
     get_auctions_item = FunctionItem("Get Auctions", get_auctions)
     close_auction = FunctionItem("Close Auction", close_auction)
     bid_item = FunctionItem("Place Bid", place_bid)
 
-
     menu.append_item(create_auction_item)
+    menu.append_item(create_test_auction_item)
     menu.append_item(get_auctions_item)
     menu.append_item(close_auction)
     menu.append_item(bid_item)

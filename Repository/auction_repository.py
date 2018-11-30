@@ -11,10 +11,12 @@ import ssl
 import requests
 import base64
 import codecs
+import jsonpickle
+from OpenSSL import crypto
 
 app = Flask(__name__)
 auctions = []
-with open('addresses.json', 'r') as myfile:
+with open('../addresses.json', 'r') as myfile:
     addresses = json.load(myfile)
 
 auction_manager_add = addresses['manager']
@@ -22,7 +24,7 @@ auction_repository_add = addresses['repository']
 
 def createReceipt(block):
     privKey = crypto.load_privatekey(crypto.FILETYPE_PEM, open("SSL/key.pem", 'r').read())
-    receipt = crypto.sign(privKey, block, 'RSA-SHA1')
+    receipt = crypto.sign(privKey, block.prev_signature, 'RSA-SHA1')
     return receipt
 
 @app.route("/")
@@ -85,11 +87,11 @@ def place_bid():
     if r.text == 'False':
         return json.dumps("User authentication Failed")
 
-    if auction.blocks[-1].verifyNonce(nonce, auction.chalenge):
+    if block.verifyNonce(nonce, auction.chalenge):
         auction.add_block(block)
         receipt = createReceipt(block)
-        return json.dumps(("Bid added",receipt)) 
-    return "Bid refused"
+        return json.dumps(("Bid added", str(receipt)))
+    return json.dumps("Bid refused")
     
 
 @app.route('/get_last_auction_bid', methods=['GET'])
