@@ -3,6 +3,10 @@ from flask import request, Flask
 import requests
 import json
 import ssl
+from OpenSSL import crypto
+from os import listdir
+from os.path import isfile, join
+from PyKCS11 import ckbytelist, PyKCS11Error
 
 with open('addresses.json') as json_file:
     data = json.load(json_file)
@@ -15,8 +19,11 @@ def createAuction():
     timeLimit = request.form['timeLimit']
     description = request.form['description']
     auctionType = request.form['auctionType']
-    creator = request.form['creator']
+    creator = json.loads(request.form['creator'])
     bid_validations = request.form.get('bid_validations') 
+
+    if not confirmSignature(creator["Certificate"], creator["Signature"]):
+        return "Auction not created: User not authenticated."
 
     try:
         f = open("serialNumber", "r+") 
@@ -26,17 +33,11 @@ def createAuction():
         f = open("serialNumber", "w")
         serialNumber = 0
 
-    print("hey")
     f.write(str(serialNumber + 1))
     f.close()
 
     r = s.post(auction_repository_ip + "/create_auction", data={'serialNumber': serialNumber, 'name': name, 'timeLimit': timeLimit, 'description': description, 'auctionType': auctionType, 'creator' : creator})
     return "Auction " + str(serialNumber) + " created\n"
-
-@app.route('/verify_user', methods = ['POST'])
-def verify_user():
-    user_data = json.loads(request.form['user_data'])
-    return confirmSignature(user_data['BI'], user_data['Certificate'], user_data['Signature'])
 
 def closeAuction(user, serialNumber):
     return    
@@ -48,31 +49,40 @@ def verifyCert(cert):
     for trusted_cert in trusted_certs:
         store.add_cert(trusted_cert)
 
-    store_ctx = crypto.X509StoreContext(store, certificate)
+    store_ctx = crypto.X509StoreContext(store, cert)
     try:
         result = store_ctx.verify_certificate()
     except crypto.X509StoreContextError:
-        return false
-    return true
+        return False
+    return True
 
 def confirmSignature(cert, signature):
-    certificate = crypto.load_certificate(crypto.FILETYPE_ASN1, cert)
+    try:
+        certificate = crypto.load_certificate(crypto.FILETYPE_ASN1, bytes(cert))
+    except crypto.Error:
+        print("Invalid certificate")
+        return False
+
+
     if not verifyCert(certificate):
         print("Certificate is not valid.")
-        return false
+        return False
 
-    BI = [x[1] for x in certificate.get_subject().get_components() if "serialNumber" in str(x[0])][0].decode("utf-8")
+    try:
+        signature = bytes(ckbytelist(bytes(json.loads(signature))))
+    except PyKCS11Error:
+        print("Signature is not valid.")
+        return False
+
+    BI = [x[1] for x in certificate.get_subject().get_components() if "serialNumber" in str(x[0])][0]
     try:
         crypto.verify(certificate, signature, BI, 'RSA-SHA1')
     except crypto.Error:
         print("Signature is not valid")
-        return false
+        return False
 
-    return true
+    return True
         
-
-
-
 if __name__ == "__main__":
     s = requests.Session()
     s.verify = "SSL/certificates.pem"
