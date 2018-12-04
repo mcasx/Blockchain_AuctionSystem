@@ -7,15 +7,54 @@ from OpenSSL import crypto
 from os import listdir
 from os.path import isfile, join
 from PyKCS11 import ckbytelist, PyKCS11Error
+from Crypto.Util.asn1 import DerSequence
+from Crypto.PublicKey import RSA
+from binascii import a2b_base64
+import pem
+import random
 
 #PEM_pass = getpass('PEM Passphrase: ')
 PEM_pass = '12345'
+
+with open('addresses.json', 'r') as myfile:
+    addresses = json.load(myfile)
+
+auction_manager_add = addresses['manager']
+auction_repository_add = addresses['repository']
 
 with open('addresses.json') as json_file:
     data = json.load(json_file)
     auction_repository_ip = data["repository"]
 app = Flask(__name__)
- 
+
+def get_public_key(cert):
+    # Convert from PEM to DER
+    
+    lines = cert.as_text().replace(" ",'').split()
+    der = a2b_base64(''.join(lines[1:-1]))
+
+    # Extract subjectPublicKeyInfo field from X.509 certificate (see RFC3280)
+    cert = DerSequence()
+    cert.decode(der)
+    tbsCertificate = DerSequence()
+    tbsCertificate.decode(cert[0])
+    subjectPublicKeyInfo = tbsCertificate[6]
+
+    # Initialize RSA key
+    return RSA.importKey(subjectPublicKeyInfo)
+
+certs = pem.parse_file('SSL/certificates.pem')
+repository_public_key = get_public_key(certs[0])
+privKey = crypto.load_privatekey(crypto.FILETYPE_PEM, open("SSL/key.pem", 'r').read(), passphrase=PEM_pass.encode('utf-8'))
+input(privKey)
+
+def encrypt(data):
+    return repository_public_key.encrypt(data, random.getrandbits(128))
+
+def decrypt(data):
+    return None #TODO  #privKey.decrypt(data)
+
+
 @app.route('/createAuction', methods=['POST'])
 def createAuction():
     name = request.form['name']
@@ -39,11 +78,23 @@ def createAuction():
     f.write(str(serialNumber + 1))
     f.close()
 
-    r = s.post(auction_repository_ip + "/create_auction", data={'serialNumber': serialNumber, 'name': name, 'timeLimit': timeLimit, 'description': description, 'auctionType': auctionType, 'creator' : creator})
+    r = s.post(auction_repository_ip + "/create_auction", data={'serialNumber': serialNumber, 'name': name, 'timeLimit': timeLimit, 'description': description, 'auctionType': auctionType, 'creator' : creator['BI']})
     return "Auction " + str(serialNumber) + " created\n"
 
-def closeAuction(user, serialNumber):
-    return    
+@app.route('/closeAuction', methods=['POST'])
+def closeAuction():
+    creator = json.loads(request.form['user'])
+    auction = request.form['serial_number']
+
+    if not confirmSignature(creator["Certificate"], creator["Signature"]):
+        return "Auction not created: User not authenticated."
+
+    r = s.post(auction_repository_add + '/close_auction', data = {
+        'serial_number' : auction,
+        'user' : creator['BI']
+    })
+
+    return r.text
 
 def verifyCert(cert):
     files = ["CCCerts/" + f for f in listdir('CCCerts') if isfile(join('CCCerts', f))]
@@ -87,10 +138,12 @@ def confirmSignature(cert, signature):
     return True
         
 if __name__ == "__main__":
-    s = requests.Session()
-    s.verify = "SSL/certificates.pem"
-
-    context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
+    #s = requests.Session()
+    s = requests
+    #s.verify = "SSL/certificates.pem"
+    #context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
     #Should prompt OpenSSL to ask for password
-    context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem', password = PEM_pass)
-    app.run(host="127.0.0.1", port="5000", debug=True, ssl_context=context)
+    #context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem', password = PEM_pass)
+    
+    
+    app.run(host="127.0.0.1", port="5000", debug=True)#, ssl_context=context)
