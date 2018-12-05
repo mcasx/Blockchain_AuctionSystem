@@ -12,6 +12,9 @@ from Crypto.PublicKey import RSA
 from binascii import a2b_base64
 import pem
 import random
+import base64
+
+
 
 #PEM_pass = getpass('PEM Passphrase: ')
 PEM_pass = '12345'
@@ -45,19 +48,24 @@ def get_public_key(cert):
 
 certs = pem.parse_file('SSL/certificates.pem')
 repository_public_key = get_public_key(certs[0])
-privKey = crypto.load_privatekey(crypto.FILETYPE_PEM, open("SSL/key.pem", 'r').read(), passphrase=PEM_pass.encode('utf-8'))
-input(privKey)
+#privKey = crypto.load_privatekey(crypto.FILETYPE_PEM, open("SSL/key.pem", 'r').read(), passphrase=PEM_pass.encode('utf-8')).to_cryptography_key()
 
-def encrypt(data):
-    return repository_public_key.encrypt(data, random.getrandbits(128))
+with open("SSL/key.pem","rb") as mf:
+    private_key = RSA.importKey(mf.read(), passphrase=PEM_pass)
+
+def encrypt_repo(data):
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    return base64.b64encode(repository_public_key.encrypt(data, random.getrandbits(128))[0])
 
 def decrypt(data):
-    return None #TODO  #privKey.decrypt(data)
-
+    return private_key.decrypt(base64.b64decode(data)).decode()
 
 @app.route('/createAuction', methods=['POST'])
 def createAuction():
-    name = request.form['name']
+    
+    name = decrypt(request.form['name'])
+    
     timeLimit = request.form['timeLimit']
     description = request.form['description']
     auctionType = request.form['auctionType']
@@ -78,7 +86,13 @@ def createAuction():
     f.write(str(serialNumber + 1))
     f.close()
 
-    r = s.post(auction_repository_ip + "/create_auction", data={'serialNumber': serialNumber, 'name': name, 'timeLimit': timeLimit, 'description': description, 'auctionType': auctionType, 'creator' : creator['BI']})
+    r = s.post(auction_repository_ip + "/create_auction", data={
+        'serialNumber': serialNumber, 
+        'name': encrypt_repo(name), 
+        'timeLimit': timeLimit, 
+        'description': description, 
+        'auctionType': auctionType, 
+        'creator' : creator['BI']})
     return "Auction " + str(serialNumber) + " created\n"
 
 @app.route('/closeAuction', methods=['POST'])

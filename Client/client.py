@@ -12,7 +12,6 @@ from Bid import Bid
 from Block import Block, get_block_from_dict
 import codecs
 
-
 urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 
 from PyKCS11 import *
@@ -21,11 +20,48 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 import getpass
 import pem
+from Crypto.Util.asn1 import DerSequence
+from Crypto.PublicKey import RSA
+from binascii import a2b_base64
+import random
+import base64
+
 
 receipts = []
 
 with open('user_info', 'rb') as mf:
     user_info = pickle.load(mf)
+
+def get_public_key(cert):
+    # Convert from PEM to DER
+    
+    lines = cert.as_text().replace(" ",'').split()
+    der = a2b_base64(''.join(lines[1:-1]))
+
+    # Extract subjectPublicKeyInfo field from X.509 certificate (see RFC3280)
+    cert = DerSequence()
+    cert.decode(der)
+    tbsCertificate = DerSequence()
+    tbsCertificate.decode(cert[0])
+    subjectPublicKeyInfo = tbsCertificate[6]
+
+    # Initialize RSA key
+    return RSA.importKey(subjectPublicKeyInfo)
+
+certs = pem.parse_file('SSL/certificates.pem')
+manager_public_key = get_public_key(certs[0])
+repository_public_key = get_public_key(certs[1])
+
+def encrypt_repo(data):
+    if data.isinstance(str):
+        data = data.encode('utf-8')
+    return base64.b64encode(repository_public_key.encrypt(data, random.getrandbits(128))[0])
+
+def encrypt_man(data):
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    return base64.b64encode(manager_public_key.encrypt(data, random.getrandbits(128))[0])
+
 
 class bcolors:
     HEADER = '\033[95m'
@@ -114,7 +150,7 @@ def create_auction():
         creator = getUserAuthInfo()
 
         r = s.post(auction_manager_add + "/createAuction", data={
-            'name': name_of_auction, 
+            'name': encrypt_man(name_of_auction), 
             'description': description, 
             'timeLimit': time_limit, 
             'auctionType': auction_type, 
@@ -142,8 +178,9 @@ def create_test_auction():
     auction_type = "English Auction"
     clear()
     creator = getUserAuthInfo()
+
     r = s.post(auction_manager_add + "/createAuction", data={
-        'name': name_of_auction, 
+        'name': encrypt_man(name_of_auction),
         'description': description, 
         'timeLimit': time_limit, 
         'auctionType': auction_type, 
@@ -153,7 +190,8 @@ def create_test_auction():
     return 
 
 def close_auction():
-    params = {'user':getUserAuthInfo()}
+    user = getUserAuthInfo()
+    params = {'user':user['BI']}
     r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
     auctions = json.loads(r.text)
     
@@ -174,8 +212,9 @@ def close_auction():
             print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
         selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
     
-    r = s.post(auction_repository_add + '/close_auction', data = {
-        'serial_number' : auctions[int(selection)-1]['serial_number']
+    r = s.post(auction_manager_add + '/closeAuction', data = {
+        'serial_number' : auctions[int(selection)-1]['serial_number'],
+        'user' : json.dumps(user)
     })
     input('\n' + r.text + '\n\nPress Enter to continue')
     return 
@@ -183,7 +222,7 @@ def close_auction():
 
 def place_bid():
     params = {'user':getUserAuthInfo()}
-    r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
+    r = s.get(auction_repository_add + "/get_open_auctions", params=params) 
     auctions = json.loads(r.text)
     
     if not auctions:
@@ -217,9 +256,10 @@ def place_bid():
     
     block = json.loads(r.content)
 
-    value = input('\nInsert value to bid: ')
+    value = input('\nInsert value to bid (last bid: '+ str(block['value']) +'): ') \
+        if block['auction_type'] == 'English' else input('\nInsert value to bid: ')
     
-    while(not is_number(value) or float(block['value']) > float(value)):
+    while(not is_number(value) or ((float(block['value']) > float(value)) if block['auction_type'] == 'English' else (0 >= float(value)))):
         input('\n Invalid value!\n\nPress enter to continue')
         value = input('\nInsert value to bid: ')
 

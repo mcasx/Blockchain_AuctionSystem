@@ -14,10 +14,14 @@ import codecs
 import jsonpickle
 from OpenSSL import crypto
 from getpass import getpass
- 
+from Crypto.Util.asn1 import DerSequence
+from Crypto.PublicKey import RSA
+from binascii import a2b_base64
+import pem
+import random
+
 app = Flask(__name__)
 auctions = []
-
 
 #PEM_pass = getpass('PEM Passphrase: ')
 PEM_pass = '12345'
@@ -28,9 +32,40 @@ with open('../addresses.json', 'r') as myfile:
 auction_manager_add = addresses['manager']
 auction_repository_add = addresses['repository']
 
+def get_public_key(cert):
+    # Convert from PEM to DER
+    
+    lines = cert.as_text().replace(" ",'').split()
+    der = a2b_base64(''.join(lines[1:-1]))
+
+    # Extract subjectPublicKeyInfo field from X.509 certificate (see RFC3280)
+    cert = DerSequence()
+    cert.decode(der)
+    tbsCertificate = DerSequence()
+    tbsCertificate.decode(cert[0])
+    subjectPublicKeyInfo = tbsCertificate[6]
+
+    # Initialize RSA key
+    return RSA.importKey(subjectPublicKeyInfo)
+
+certs = pem.parse_file('SSL/certificates.pem')
+manager_public_key = get_public_key(certs[0])
+with open("SSL/key.pem","rb") as mf:
+    private_key = RSA.importKey(mf.read(), passphrase=PEM_pass)
+
+
+def encrypt_man(data):
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    return base64.b64encode(manager_public_key.encrypt(data, random.getrandbits(128))[0])
+
+
+def decrypt(data):
+    return private_key.decrypt(base64.b64decode(data)).decode()
+
+
 def createReceipt(block):
-    privKey = crypto.load_privatekey(crypto.FILETYPE_PEM, open("SSL/key.pem", 'r').read(), passphrase=PEM_pass.encode('utf-8'))
-    receipt = crypto.sign(privKey, block.prev_signature, 'RSA-SHA1')
+    receipt = crypto.sign(private_key, block.prev_signature, 'RSA-SHA1')
     return receipt
 
 @app.route("/")
@@ -39,7 +74,7 @@ def hello():
 
 @app.route("/create_auction", methods=['POST'])
 def create_auction():
-    name = request.form['name']
+    name = decrypt(request.form['name'])
     time_limit = datetime.strptime(request.form['timeLimit'], '%b %d %Y %I:%M%p')
     description = request.form['description']
     auction_type = request.form['auctionType']
@@ -57,6 +92,8 @@ def create_auction():
         threading.Timer(delay, new_auction.close).start()
    
     auctions.append(new_auction)
+    print(creator)
+
     return "Auction Created"
 
 @app.route("/create_test_auction")
@@ -114,17 +151,23 @@ def get_last_auction_block():
     auction = get_auction(serial_number)
     if not auction:
         return 'Auction does not exist'
-    return json.dumps({'hash':auction.get_last_block().hash().hexdigest(), 'value': (auction.get_last_block().bid.value if not auction.get_last_block().bid is None else 0)}) 
+    return json.dumps({'auction_type':auction.auction_type, 'hash':auction.get_last_block().hash().hexdigest(), 'value': (auction.get_last_block().bid.value if not auction.get_last_block().bid is None else 0)}) 
 
 @app.route('/get_open_user_auctions', methods=['GET'])
 def get_open_user_auctions():
     return str(json.dumps([x.__dict__ for x in [y for y in auctions if (y.state == 'Open' and y.creator == request.args.get('user'))]], indent=4, default=str))
 
+@app.route('/get_open_auctions', methods=['GET'])
+def get_open_auctions():
+    return str(json.dumps([x.__dict__ for x in [y for y in auctions if y.state == 'Open']], indent=4, default=str))
+
 
 @app.route("/close_auction", methods=['POST'])
 def close_auction():
     serial_number = request.form['serial_number']
+    user = request.form['user']
     auction = get_auction(serial_number)
+    if auction.creator != user: return "Wrong user!"
     if auction == None: return "Auction does not exist"
     if auction.state == "Closed": return "Auction already closed"
     auction.state = "Closed"
@@ -142,10 +185,14 @@ def get_auctions():
     return str(json.dumps([x.__dict__ for x in auctions], indent=4, default=str))
 
 if __name__ == "__main__":
+    '''
+    Removed SSL
     s = requests.Session()
     s.verify = "SSL/certificates.pem"
     
     context = ssl.SSLContext(protocol=ssl.PROTOCOL_TLS)
     #Should prompt OpenSSL to ask for password
     context.load_cert_chain('SSL/certificate.pem', keyfile='SSL/key.pem', password = PEM_pass)
-    app.run(host='127.0.0.1', port=3000, debug=True, ssl_context=context)
+    '''
+    s = requests
+    app.run(host='127.0.0.1', port=3000, debug=True)#, ssl_context=context)
