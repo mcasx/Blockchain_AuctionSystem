@@ -15,7 +15,6 @@ import random
 import base64
 
 
-
 #PEM_pass = getpass('PEM Passphrase: ')
 PEM_pass = '12345'
 
@@ -124,6 +123,7 @@ def verifyCert(cert):
         return False
     return True
 
+
 def confirmSignature(cert, signature):
     try:
         certificate = crypto.load_certificate(crypto.FILETYPE_ASN1, bytes(cert))
@@ -150,7 +150,16 @@ def confirmSignature(cert, signature):
         return False
 
     return True
-        
+
+
+@app.route('/verify_user', methods = ['POST'])
+def verify_user():
+    user_data = json.loads(request.form['user_data'])
+    return_value = confirmSignature(user_data['Certificate'], user_data['Signature']) 
+    return str(return_value)
+    
+    
+
 if __name__ == "__main__":
     #s = requests.Session()
     s = requests

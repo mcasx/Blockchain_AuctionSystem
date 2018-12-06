@@ -19,6 +19,7 @@ from Crypto.PublicKey import RSA
 from binascii import a2b_base64
 import pem
 import random
+from Crypto.Signature import PKCS1_v1_5
 
 app = Flask(__name__)
 auctions = []
@@ -65,8 +66,9 @@ def decrypt(data):
 
 
 def createReceipt(block):
-    receipt = crypto.sign(private_key, block.prev_signature, 'RSA-SHA1')
-    return receipt
+    signer = PKCS1_v1_5.new(private_key)
+    return signer.sign(block.hash())
+    
 
 @app.route("/")
 def hello():
@@ -132,8 +134,8 @@ def place_bid():
 
     if block.verifyNonce(nonce, auction.chalenge):
         auction.add_block(block)
-        receipt = createReceipt(block)
-        return json.dumps(("Bid added", str(receipt)))
+        receipt = base64.b64encode(createReceipt(block))
+        return json.dumps(("Bid added", receipt.decode()))
     return json.dumps("Bid refused")
     
 
@@ -161,6 +163,9 @@ def get_open_user_auctions():
 def get_open_auctions():
     return str(json.dumps([x.__dict__ for x in [y for y in auctions if y.state == 'Open']], indent=4, default=str))
 
+@app.route('/get_blocks', methods=['GET'])
+def get_blocks():
+    return json.dumps([x.get_json_block() for x in get_auction(request.args.get('serial_number')).blocks])
 
 @app.route("/close_auction", methods=['POST'])
 def close_auction():

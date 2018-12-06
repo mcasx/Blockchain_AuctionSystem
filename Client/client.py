@@ -255,11 +255,12 @@ def place_bid():
     r = s.get(auction_repository_add + "/get_last_auction_block", params=params) 
     
     block = json.loads(r.content)
+    input(block)
 
     value = input('\nInsert value to bid (last bid: '+ str(block['value']) +'): ') \
-        if block['auction_type'] == 'English' else input('\nInsert value to bid: ')
+        if block['auction_type'] == 'English Auction' else input('\nInsert value to bid: ')
     
-    while(not is_number(value) or ((float(block['value']) > float(value)) if block['auction_type'] == 'English' else (0 >= float(value)))):
+    while(not is_number(value) or ((float(block['value']) >= float(value)) if block['auction_type'] == 'English Auction' else (0 >= float(value)))):
         input('\n Invalid value!\n\nPress enter to continue')
         value = input('\nInsert value to bid: ')
 
@@ -283,9 +284,8 @@ def place_bid():
     
     response = json.loads(r.text)
 
-
-    if isinstance(response, tuple):
-        receipts.append({'auction': auction, 'block': new_block, 'receipt':bytes(response[1])})
+    if isinstance(response, list):
+        receipts.append({'auction': auction, 'block': new_block, 'receipt':base64.b64decode(response[1].encode())})
 
     input(response[0] + '\n\nPress enter to continue')
     return
@@ -294,7 +294,7 @@ def place_bid():
 def get_auctions():
     r = s.get(auction_repository_add + "/get_auctions")
     auctions = json.loads(r.text)
-    if auctions == []: 
+    if not auctions: 
         input('No auctions in the repository\n\nPress Enter to continue')
         return
     i = 0
@@ -306,7 +306,45 @@ def get_auctions():
         cnt_str = input('\n\n\nBid ' + str(i) + '/' + str(len(auctions)) + '\n\nContinue ([y]/n): ')
         if cnt_str and cnt_str == 'n': return
     
+def get_blocks_from_auction():
+    r = s.get(auction_repository_add + "/get_auctions")
+    auctions = json.loads(r.text)
+    if not auctions: 
+        input('No auctions in the repository\n\nPress Enter to continue')
+        return
 
+    i = 1
+    for auction in auctions:
+        print('\n' + (str(i) if i > 10 else ('0' + str(i))) + ') Serial Number: ' + auction['serial_number'] + '\n    Name         : ' + auction['name'])
+        i += 1
+    selection = input('\n' + 'Select auction (enter q to exit): ')
+
+    while(not is_int(selection) or (int(selection) < 0 or int(selection)> len(auctions))):
+        if(selection and selection[0] == 'q'): return
+        clear()
+        input('Invalid Selection\n\nPress Enter to continue ')
+        clear()
+        i = 1
+        for auction in auctions:
+            print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + auction['serial_number'] + '\n    Name: ' + auction['name'])
+            i += 1
+        selection = input('\n' + 'Select auction (enter q to exit): ')
+
+    auction = auctions[int(selection)-1]['serial_number']
+
+    params = {'serial_number': auction}
+    r = s.get(auction_repository_add + "/get_blocks", params = params)
+    
+    for block in json.loads(r.text):
+        print(block)
+    input('\nPress enter to continue')
+
+def view_receipts():
+    if not receipts:
+        print('There are no bids yet.')
+    else:
+        print(receipts)
+    input('\nPress Enter to continue')
 
 if __name__ == "__main__":
     s = requests.Session()
@@ -327,12 +365,16 @@ if __name__ == "__main__":
     get_auctions_item = FunctionItem("Get Auctions", get_auctions)
     close_auction = FunctionItem("Close Auction", close_auction)
     bid_item = FunctionItem("Place Bid", place_bid)
+    receipts_item = FunctionItem("View Receipts", view_receipts)
+    blocks_item = FunctionItem("Get Blocks of Auction", get_blocks_from_auction)
 
     menu.append_item(create_auction_item)
     menu.append_item(create_test_auction_item)
     menu.append_item(get_auctions_item)
     menu.append_item(close_auction)
     menu.append_item(bid_item)
+    menu.append_item(receipts_item)
+    menu.append_item(blocks_item)
 
     menu.show()
 
