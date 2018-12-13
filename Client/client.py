@@ -201,6 +201,7 @@ def close_auction():
     i = 1
     for auction in auctions:
         print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
+        i+=1
 
     selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
     while(not is_int(selection) or (int(selection) < 0 or int(selection)> len(auctions))):
@@ -208,8 +209,10 @@ def close_auction():
         clear()
         input('Invalid Selection\n\nPress Enter to continue ')
         clear()
+        i = 1
         for auction in auctions:
             print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
+        i += 1
         selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
     
     r = s.post(auction_manager_add + '/closeAuction', data = {
