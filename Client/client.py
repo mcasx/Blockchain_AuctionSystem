@@ -11,9 +11,6 @@ import urllib3
 from Bid import Bid
 from Block import Block, get_block_from_dict
 import codecs
-
-urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
-
 from PyKCS11 import *
 from OpenSSL import crypto
 from cryptography import x509
@@ -26,7 +23,7 @@ from binascii import a2b_base64
 import random
 import base64
 
-
+urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 receipts = []
 
 with open('user_info', 'rb') as mf:
@@ -167,7 +164,7 @@ def create_auction():
         clear()
         print(bcolors.FAIL + 'Could not connect to Auction Manager\n\n' + bcolors.ENDC)
         input('Press enter to continue')
- 
+
 def create_test_auction():
     name_of_auction = "test name " + str(randint(1,100))
     clear()
@@ -352,7 +349,7 @@ def view_receipts():
 if __name__ == "__main__":
     s = requests.Session()
     s.verify = "SSL/certificates.pem"
-     
+
     menu = ConsoleMenu("Auction Client")
     clear = lambda: os.system('clear')
 
