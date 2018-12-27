@@ -20,12 +20,13 @@ class auction(object):
 
     def add_block(self, block):
         self.blocks.append(block)
-        self.blockTime.append(time.time())
+        self.blockTimes.append(time.time())
         self._def_challenge()
 
     def _def_challenge(self):
         now = time.time()
         requests = len([x for x in self.blockTimes if now - x < 60])
+        print(requests)
         challenge = floor(log(requests))
         if challenge > 1:
             self.chalenge = challenge

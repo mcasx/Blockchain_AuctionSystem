@@ -22,6 +22,10 @@ from Crypto.PublicKey import RSA
 from binascii import a2b_base64
 import random
 import base64
+from Crypto.Cipher import AES
+from Crypto import Random
+from Crypto.Hash.HMAC import HMAC
+from Crypto.Hash import SHA256
 
 urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 receipts = []
@@ -52,6 +56,7 @@ repository_public_key = get_public_key(certs[1])
 def encrypt_repo(data):
     if data.isinstance(str):
         data = data.encode('utf-8')
+    data = data.encode('utf-8')
     return base64.b64encode(repository_public_key.encrypt(data, random.getrandbits(128))[0])
 
 def encrypt_man(data):
@@ -59,6 +64,13 @@ def encrypt_man(data):
         data = data.encode('utf-8')
     return base64.b64encode(manager_public_key.encrypt(data, random.getrandbits(128))[0])
 
+def encrypt_sym(data, key):
+    iv = Random.new().read(AES.block_size)
+    cipher = AES.new(key, AES.MODE_CFB, iv)
+    return base64.b64encode(iv + cipher.encrypt(data))
+
+def base64_encode(data):
+    return base64.b64encode(data)
 
 class bcolors:
     HEADER = '\033[95m'
@@ -104,6 +116,7 @@ def getUserAuthInfo():
     pkcs11.load(lib)
     slots = pkcs11.getSlotList()
 
+
     for slot in slots:
         if 'Auth PIN (CARTAO DE CIDADAO)' in pkcs11.getTokenInfo(slot).label:
             session = pkcs11.openSession(slot)
@@ -124,7 +137,6 @@ def getUserAuthInfo():
             session.closeSession
 
     return userInfo
-
 
 def create_auction():
     try:
@@ -176,13 +188,23 @@ def create_test_auction():
     clear()
     creator = getUserAuthInfo()
 
+    data = {'name': name_of_auction,
+        'description': description,
+        'timeLimit': time_limit,
+        'auctionType': auction_type,
+        'creator' : json.dumps(creator),
+        'bid_validations' : None}
+
+    key = Random.get_random_bytes(32)
+    encrypted = encrypt_sym(json.dumps(data), key)
+    mac = HMAC(key, msg=encrypted, digestmod=SHA256)
+
     r = s.post(auction_manager_add + "/createAuction", data={
-        'name': encrypt_man(name_of_auction),
-        'description': description, 
-        'timeLimit': time_limit, 
-        'auctionType': auction_type, 
-        'creator' : json.dumps(creator)
-    })
+            'signature' : mac.hexdigest(),
+            'symdata' : encrypted,
+            'key' : encrypt_man(key)
+        }
+    )
     input(r.text)
     return 
 
@@ -272,8 +294,10 @@ def place_bid():
 
     new_block = Block(bid, block['hash'])
     
-    new_block.mine(auction.chalenge)
+    print(auctions[int(selection)-1]['chalenge'])
 
+    new_block.mine(int(auctions[int(selection)-1]['chalenge']))
+    
     r = s.post(auction_repository_add + "/place_bid", data = {
         'serial_number' : auction,
         'user_data' : json.dumps(user_info),

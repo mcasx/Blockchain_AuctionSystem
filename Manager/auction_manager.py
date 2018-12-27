@@ -13,10 +13,15 @@ from binascii import a2b_base64
 import pem
 import random
 import base64
+from Crypto import Random
+from Crypto.Cipher import AES
+from Crypto.Hash.HMAC import HMAC
+from Crypto.Hash import SHA256
 
 
 #PEM_pass = getpass('PEM Passphrase: ')
 PEM_pass = '12345'
+recent_keys = []
 
 with open('addresses.json', 'r') as myfile:
     addresses = json.load(myfile)
@@ -28,6 +33,16 @@ with open('addresses.json') as json_file:
     data = json.load(json_file)
     auction_repository_ip = data["repository"]
 app = Flask(__name__)
+
+def base64_decode(data):
+    return base64.b64decode(data)
+
+def decrypt_sym(enc, key):
+    enc = base64.b64decode(enc)
+    iv = enc[:AES.block_size]
+    cipher = AES.new(key, AES.MODE_CFB, iv)
+    return cipher.decrypt(enc[AES.block_size:]).decode('utf-8')
+
 
 def get_public_key(cert):
     # Convert from PEM to DER
@@ -58,18 +73,43 @@ def encrypt_repo(data):
     return base64.b64encode(repository_public_key.encrypt(data, random.getrandbits(128))[0])
 
 def decrypt(data):
-    return private_key.decrypt(base64.b64decode(data)).decode()
+    return private_key.decrypt(base64.b64decode(data))
+
 
 @app.route('/createAuction', methods=['POST'])
 def createAuction():
     
-    name = decrypt(request.form['name'])
+    '''
+    input('oi')
+    input(json.loads(decrypt(request.form['test'])))
+    input(request.form['data'].encode())
+    input(decrypt(request.form['data']).decode())
+    '''
     
+    key = decrypt(request.form['key'])
+    data = json.loads(decrypt_sym(request.form['symdata'], key))
+    received_mac = request.form['signature']
+
+    mac = HMAC(key, msg=request.form['symdata'], digestmod=SHA256) 
+
+    if(received_mac != mac.hexdigest()):
+        return 'Data Integrity Compromised!'
+
+    name            = data['name']
+    timeLimit       = data['timeLimit']
+    description     = data['description']
+    auctionType     = data['auctionType']
+    creator         = json.loads(data['creator'])
+    
+
+    '''
+    name = decrypt(request.form['name'])    
     timeLimit = request.form['timeLimit']
     description = request.form['description']
     auctionType = request.form['auctionType']
     creator = json.loads(request.form['creator'])
     bid_validations = request.form.get('bid_validations') 
+    '''
 
     if not confirmSignature(creator["Certificate"], creator["Signature"]):
         return "Auction not created: User not authenticated."
