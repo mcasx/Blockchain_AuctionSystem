@@ -20,6 +20,12 @@ from binascii import a2b_base64
 import pem
 import random
 from Crypto.Signature import PKCS1_v1_5
+from Crypto.Cipher import AES
+from Crypto.Hash.HMAC import HMAC
+from Crypto.Hash import SHA256
+from Crypto.Cipher import AES
+from Crypto import Random
+
 
 app = Flask(__name__)
 auctions = []
@@ -60,9 +66,13 @@ def encrypt_man(data):
         data = data.encode('utf-8')
     return base64.b64encode(manager_public_key.encrypt(data, random.getrandbits(128))[0])
 
+def encrypt_sym(data, key):
+    iv = Random.new().read(AES.block_size)
+    cipher = AES.new(key, AES.MODE_CFB, iv)
+    return base64.b64encode(iv + cipher.encrypt(data))
 
 def decrypt(data):
-    return private_key.decrypt(base64.b64decode(data)).decode()
+    return private_key.decrypt(base64.b64decode(data))
 
 
 def createReceipt(block):
@@ -70,19 +80,37 @@ def createReceipt(block):
     return signer.sign(block.hash())
     
 
+def decrypt_sym(enc, key):
+    enc = base64.b64decode(enc)
+    iv = enc[:AES.block_size]
+    cipher = AES.new(key, AES.MODE_CFB, iv)
+    return cipher.decrypt(enc[AES.block_size:]).decode('utf-8')
+
+
 @app.route("/")
 def hello():
     return "Hey "
 
 @app.route("/create_auction", methods=['POST'])
 def create_auction():
-    name = decrypt(request.form['name'])
-    time_limit = datetime.strptime(request.form['timeLimit'], '%b %d %Y %I:%M%p')
-    description = request.form['description']
-    auction_type = request.form['auctionType']
-    creator = request.form['creator']
-    bid_validations = request.form.get('bid_validations') 
-    serial_number = request.form['serialNumber']
+
+    key = decrypt(request.form['key'])
+    
+    data = json.loads(decrypt_sym(request.form['symdata'], key))
+
+    received_mac = request.form['signature']
+    mac = HMAC(key, msg=request.form['symdata'], digestmod=SHA256) 
+
+    if(received_mac != mac.hexdigest()):
+        return 'Data Integrity Compromised!'
+
+    name = data['name']
+    time_limit = datetime.strptime(data['timeLimit'], '%b %d %Y %I:%M%p')
+    description = data['description']
+    auction_type = data['auctionType']
+    creator = data['creator']
+    bid_validations = (data['bid_validations'] if 'bid_validdations' in data else None)
+    serial_number = data['serialNumber']
     new_auction = auction(name, serial_number, time_limit, description, auction_type, creator, bid_validations)
     
     now = datetime.now()
@@ -92,7 +120,7 @@ def create_auction():
     else:
         delay = (new_auction.time_limit - now).total_seconds()
         threading.Timer(delay, new_auction.close).start()
-   
+
     auctions.append(new_auction)
     print(creator)
 
@@ -116,17 +144,31 @@ def create_test_auction():
 
 @app.route("/place_bid", methods=['POST'])
 def place_bid():
-    serial_number = request.form['serial_number']
+
+    key = decrypt(request.form['key'])
+    
+    data = json.loads(decrypt_sym(request.form['symdata'], key))
+
+    received_mac = request.form['signature']
+    mac = HMAC(key, msg=request.form['symdata'], digestmod=SHA256) 
+
+    if(received_mac != mac.hexdigest()):
+        return 'Data Integrity Compromised!'
+
+    serial_number = data['serial_number']
     auction = get_auction(serial_number)
+
     if auction == None: return json.dumps("Auction does not exist")
     if auction.state == "Closed": return json.dumps("Bid refused")
 
-    block = get_block_from_dict(json.loads(request.form['block']))
+    block = get_block_from_dict(json.loads(data['block']))
     
-    nonce = request.form['nonce']
+    nonce = data['nonce']
 
     r = s.post(auction_manager_add + '/verify_user', data = {
-        'user_data' : request.form['user_data']
+        'encrypted_user_data' : request.form['encrypted_user_data'],
+        'user_mac' : request.form['user_mac'],
+        'user_key' : request.form['user_key']
     })
 
     if r.text == 'False':

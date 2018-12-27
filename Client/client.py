@@ -54,9 +54,8 @@ manager_public_key = get_public_key(certs[0])
 repository_public_key = get_public_key(certs[1])
 
 def encrypt_repo(data):
-    if data.isinstance(str):
+    if isinstance(data, str):
         data = data.encode('utf-8')
-    data = data.encode('utf-8')
     return base64.b64encode(repository_public_key.encrypt(data, random.getrandbits(128))[0])
 
 def encrypt_man(data):
@@ -158,14 +157,24 @@ def create_auction():
         clear()
         creator = getUserAuthInfo()
 
+        data = {'name': name_of_auction,
+        'description': description,
+        'timeLimit': time_limit,
+        'auctionType': auction_type,
+        'creator' : json.dumps(creator),
+        'bid_validations' : None}
+
+        key = Random.get_random_bytes(32)
+        encrypted = encrypt_sym(json.dumps(data), key)
+        mac = HMAC(key, msg=encrypted, digestmod=SHA256)
+
         r = s.post(auction_manager_add + "/createAuction", data={
-            'name': encrypt_man(name_of_auction), 
-            'description': description, 
-            'timeLimit': time_limit, 
-            'auctionType': auction_type, 
-            'creator' : json.dumps(creator)})
+            'signature' : mac.hexdigest(),
+            'symdata' : encrypted,
+            'key' : encrypt_man(key)})
 
         clear()
+
         if "User not authenticated" in r.text:
             print(bcolors.FAIL + r.text + bcolors.ENDC)
         else:
@@ -211,13 +220,14 @@ def create_test_auction():
 def close_auction():
     user = getUserAuthInfo()
     params = {'user':user['BI']}
-    r = s.get(auction_repository_add + "/get_open_user_auctions", params=params) 
+    r = s.get(auction_repository_add + "/get_open_user_auctions", params=params)
     auctions = json.loads(r.text)
     
     if not auctions:
         input('User has no open auctions\n\n\nPress enter to continue')
         return
     i = 1
+    
     for auction in auctions:
         print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
         i+=1
@@ -234,13 +244,26 @@ def close_auction():
         i += 1
         selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
     
-    r = s.post(auction_manager_add + '/closeAuction', data = {
+
+    data = {
         'serial_number' : auctions[int(selection)-1]['serial_number'],
         'user' : json.dumps(user)
+    }
+
+    key = Random.get_random_bytes(32)
+    encrypted = encrypt_sym(json.dumps(data), key)
+    mac = HMAC(key, msg=encrypted, digestmod=SHA256)
+
+    r = s.post(auction_manager_add + '/closeAuction', data = {
+        'signature' : mac.hexdigest(),
+        'symdata' : encrypted,
+        'key' : encrypt_man(key)
     })
+
     input('\n' + r.text + '\n\nPress Enter to continue')
     return 
-    #todo
+    
+
 
 def place_bid():
     params = {'user':getUserAuthInfo()}
@@ -277,7 +300,7 @@ def place_bid():
     r = s.get(auction_repository_add + "/get_last_auction_block", params=params) 
     
     block = json.loads(r.content)
-    input(block)
+    #input(block)
 
     value = input('\nInsert value to bid (last bid: '+ str(block['value']) +'): ') \
         if block['auction_type'] == 'English Auction' else input('\nInsert value to bid: ')
@@ -298,14 +321,32 @@ def place_bid():
 
     new_block.mine(int(auctions[int(selection)-1]['chalenge']))
     
-    r = s.post(auction_repository_add + "/place_bid", data = {
-        'serial_number' : auction,
-        'user_data' : json.dumps(user_info),
-        'block' : new_block.get_json_block(),
-        'nonce' : new_block.nonce
-    })
 
-    
+    user_key = Random.get_random_bytes(32)
+    encrypted_user_info = encrypt_sym(json.dumps(user_info), user_key)
+    user_mac = HMAC(user_key, msg=encrypted_user_info, digestmod=SHA256)
+
+    data = {
+        'serial_number' : auction,
+        'block' : new_block.get_json_block(),
+        'nonce' : new_block.nonce,
+        
+    }
+
+    key = Random.get_random_bytes(32)
+    encrypted = encrypt_sym(json.dumps(data), key)
+    mac = HMAC(key, msg=encrypted, digestmod=SHA256)
+
+    r = s.post(auction_repository_add + "/place_bid", data = {
+        'symdata' : encrypted,
+        'key' : encrypt_repo(key),
+        'signature' : mac.hexdigest(),
+        'encrypted_user_data' : encrypted_user_info,
+        'user_mac' : user_mac,
+        'user_key' : encrypt_man(user_key)
+    })
+    input('oi')
+
     response = json.loads(r.text)
 
     if isinstance(response, list):

@@ -34,14 +34,10 @@ with open('addresses.json') as json_file:
     auction_repository_ip = data["repository"]
 app = Flask(__name__)
 
-def base64_decode(data):
-    return base64.b64decode(data)
-
-def decrypt_sym(enc, key):
-    enc = base64.b64decode(enc)
-    iv = enc[:AES.block_size]
+def encrypt_sym(data, key):
+    iv = Random.new().read(AES.block_size)
     cipher = AES.new(key, AES.MODE_CFB, iv)
-    return cipher.decrypt(enc[AES.block_size:]).decode('utf-8')
+    return base64.b64encode(iv + cipher.encrypt(data))
 
 
 def get_public_key(cert):
@@ -75,23 +71,27 @@ def encrypt_repo(data):
 def decrypt(data):
     return private_key.decrypt(base64.b64decode(data))
 
+def base64_decode(data):
+    return base64.b64decode(data)
+
+def decrypt_sym(enc, key):
+    enc = base64.b64decode(enc)
+    iv = enc[:AES.block_size]
+    cipher = AES.new(key, AES.MODE_CFB, iv)
+    return cipher.decrypt(enc[AES.block_size:]).decode('utf-8')
+
+
+
 
 @app.route('/createAuction', methods=['POST'])
 def createAuction():
     
-    '''
-    input('oi')
-    input(json.loads(decrypt(request.form['test'])))
-    input(request.form['data'].encode())
-    input(decrypt(request.form['data']).decode())
-    '''
-    
     key = decrypt(request.form['key'])
+
     data = json.loads(decrypt_sym(request.form['symdata'], key))
     received_mac = request.form['signature']
-
+    
     mac = HMAC(key, msg=request.form['symdata'], digestmod=SHA256) 
-
     if(received_mac != mac.hexdigest()):
         return 'Data Integrity Compromised!'
 
@@ -101,16 +101,6 @@ def createAuction():
     auctionType     = data['auctionType']
     creator         = json.loads(data['creator'])
     
-
-    '''
-    name = decrypt(request.form['name'])    
-    timeLimit = request.form['timeLimit']
-    description = request.form['description']
-    auctionType = request.form['auctionType']
-    creator = json.loads(request.form['creator'])
-    bid_validations = request.form.get('bid_validations') 
-    '''
-
     if not confirmSignature(creator["Certificate"], creator["Signature"]):
         return "Auction not created: User not authenticated."
 
@@ -125,19 +115,41 @@ def createAuction():
     f.write(str(serialNumber + 1))
     f.close()
 
-    r = s.post(auction_repository_ip + "/create_auction", data={
-        'serialNumber': serialNumber, 
-        'name': encrypt_repo(name), 
-        'timeLimit': timeLimit, 
-        'description': description, 
+    
+    data = {
+        'serialNumber': serialNumber,
+        'name': name,
+        'timeLimit': timeLimit,
+        'description': description,
         'auctionType': auctionType, 
-        'creator' : creator['BI']})
+        'creator' : creator['BI']
+    }
+
+    key = Random.get_random_bytes(32)
+    encrypted = encrypt_sym(json.dumps(data), key)
+    mac = HMAC(key, msg=encrypted, digestmod=SHA256)
+
+    r = s.post(auction_repository_ip + "/create_auction", data={
+        'signature' : mac.hexdigest(),
+        'symdata' : encrypted,
+        'key' : encrypt_repo(key)
+    })
     return "Auction " + str(serialNumber) + " created\n"
+
 
 @app.route('/closeAuction', methods=['POST'])
 def closeAuction():
-    creator = json.loads(request.form['user'])
-    auction = request.form['serial_number']
+
+    key = decrypt(request.form['key'])
+    data = json.loads(decrypt_sym(request.form['symdata'], key))
+    received_mac = request.form['signature']
+    
+    mac = HMAC(key, msg=request.form['symdata'], digestmod=SHA256) 
+    if(received_mac != mac.hexdigest()):
+        return 'Data Integrity Compromised!'
+
+    creator = json.loads(data['user'])
+    auction = data['serial_number']
 
     if not confirmSignature(creator["Certificate"], creator["Signature"]):
         return "Auction not created: User not authenticated."
@@ -194,7 +206,20 @@ def confirmSignature(cert, signature):
 
 @app.route('/verify_user', methods = ['POST'])
 def verify_user():
-    user_data = json.loads(request.form['user_data'])
+    key = decrypt(request.form['user_key'])
+
+    user_data = decrypt_sym(request.form['encrypted_user_data'], key)
+
+    received_mac = request.form['user_mac']
+    
+    mac = HMAC(key, msg=request.form['encrypted_user_data'], digestmod=SHA256) 
+    if(received_mac != mac.hexdigest()):
+        return 'Data Integrity Compromised!'
+
+    mac = HMAC(key, msg=user_data['encrypted_user_data'], digestmod=SHA256) 
+    if(received_mac != mac.hexdigest()):
+        return 'Data Integrity Compromised!'
+
     return_value = confirmSignature(user_data['Certificate'], user_data['Signature']) 
     return str(return_value)
     
