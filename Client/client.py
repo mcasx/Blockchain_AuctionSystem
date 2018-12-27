@@ -275,7 +275,7 @@ def place_bid():
 
     new_block = Block(bid, block['hash'])
     
-    new_block.mine(2)
+    new_block.mine(auction.chalenge)
 
     r = s.post(auction_repository_add + "/place_bid", data = {
         'serial_number' : auction,
