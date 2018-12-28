@@ -267,6 +267,20 @@ def bid_authenticate():
     return json.dumps(return_value)
     
 
+@app.route('/get_decrypt_key', methods = ['POST'])
+def get_decrypt_key():
+    
+    auction = int(request.form['auction'])
+    signature = json.loads(request.form['signature'])
+    
+    if not repository_public_key.verify(auction, signature):
+        return "Could not verify signature"
+    
+
+    return encrypt_repo(auctions[auction][1])
+    
+
+
 def _verify_user(key, user_data, received_mac):
     mac = HMAC(key, msg=request.form['encrypted_user_data'], digestmod=SHA256) 
     if(received_mac != mac.hexdigest()):
