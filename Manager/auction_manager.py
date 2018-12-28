@@ -79,6 +79,9 @@ def decrypt(data):
 def base64_decode(data):
     return base64.b64decode(data)
 
+def base64_encode(data):
+    return base64.b64encode(data)
+
 def decrypt_sym(enc, key):
     enc = base64.b64decode(enc)
     iv = enc[:AES.block_size]
@@ -255,7 +258,7 @@ def bid_authenticate():
     else:
         value = decrypt_sym(request.form['value'], key)
     
-    return_value = {"user": user, "value": value}
+    return_value = {"user": base64_encode(user).decode('utf-8'), "value": base64_encode(value).decode('utf-8')}
     return json.dumps(return_value)
     
 
