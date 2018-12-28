@@ -135,10 +135,10 @@ def create_auction():
     now = datetime.now()
 
     if now > new_auction.time_limit:
-            new_auction.close()
+        _close_auction(new_auction)
     else:
         delay = (new_auction.time_limit - now).total_seconds()
-        threading.Timer(delay, new_auction.close).start()
+        threading.Timer(delay, _close_auction, [new_auction]).start()
 
     auctions.append(new_auction)
     print(creator)
@@ -247,6 +247,25 @@ def get_open_auctions():
 def get_blocks():
     return json.dumps([x.get_json_block() for x in get_auction(int(request.args.get('serial_number'))).blocks])
 
+def _close_auction(auction):
+    
+    r = s.post(auction_manager_add + '/get_decrypt_key', data = {
+        'auction' : auction.serial_number,
+        'signature' : json.dumps(private_key.sign(auction.serial_number, random.getrandbits(128)))
+    })
+    
+    key = decrypt(r.content)
+
+    for block in auction.blocks[1:]:
+        print(block.bid.user)
+        block.bid.user = decrypt_sym(block.bid.user, key)
+        print(block.bid.user)
+        if auction.auction_type == "Blind Auction":
+            block.bid.value = decrypt_sym(block.bid.value, key)
+    
+    auction.close()
+    return True
+
 @app.route("/close_auction", methods=['POST'])
 def close_auction():
     serial_number = int(request.form['serial_number'])
@@ -255,8 +274,10 @@ def close_auction():
     if auction.creator != user: return "Wrong user!"
     if auction == None: return "Auction does not exist"
     if auction.state == "Closed": return "Auction already closed"
-    auction.state = "Closed"
-    return "Auction closed"
+    result = _close_auction(auction)
+    if result == True:
+        return "Auction closed successfully"
+    return "Error closing the auction"
 
 
 def get_auction(serial_number):
