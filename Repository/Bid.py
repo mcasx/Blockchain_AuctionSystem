@@ -5,7 +5,7 @@ class Bid(object):
         self.user = user
         self.value = value
         #Note that this hash should never be altered after the Bid has been created, for mining use the function hash()
-        self.originalHash = self.hash()
+        self.originalHash = self.hash().hexdigest()
 
     def hash(self):
         m = hashlib.sha256()
