@@ -197,9 +197,15 @@ def place_bid():
     if r.text == 'False':
         return json.dumps("User authentication Failed")
 
+    if r.text == 'Invalid':
+        return json.dumps("Invalid value")
+
     bid_data = json.loads(r.text)
     block.bid.user = bid_data['user']
     block.bid.value = bid_data['value']
+    if auction.auction_type == "English Auction" and auction.get_last_block():
+        if (auction.get_last_bid().value >= block.bid.value):
+            return json.dumps("Bid not added: Value must be higher than highest bid")
 
     auction.add_block(block)
     receipt = base64.b64encode(createReceipt(block))
