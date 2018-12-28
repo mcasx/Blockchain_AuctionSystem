@@ -229,7 +229,7 @@ def close_auction():
     i = 1
     
     for auction in auctions:
-        print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
+        print(str(i) + ') ' + str(auction['serial_number']) + ' - ' + auction['name'])
         i+=1
 
     selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
@@ -240,7 +240,7 @@ def close_auction():
         clear()
         i = 1
         for auction in auctions:
-            print(str(i) + ') ' + auction['serial_number'] + ' - ' + auction['name'])
+            print(str(i) + ') ' + str(auction['serial_number']) + ' - ' + auction['name'])
         i += 1
         selection = input('\n' + 'Select auction to be closed (enter q to exit): ')
     
@@ -277,7 +277,7 @@ def place_bid():
     i = 1
 
     for auction in auctions:
-        print('\n' + (str(i) if i > 10 else ('0' + str(i))) + ') Serial Number: ' + auction['serial_number'] + '\n    Name         : ' + auction['name'])
+        print('\n' + (str(i) if i > 10 else ('0' + str(i))) + ') Serial Number: ' + str(auction['serial_number']) + '\n    Name         : ' + auction['name'])
         i += 1
     selection = input('\n' + 'Select auction to bid (enter q to exit): ')
 
@@ -288,7 +288,7 @@ def place_bid():
         clear()
         i = 1
         for auction in auctions:
-            print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + auction['serial_number'] + '\n    Name: ' + auction['name'])
+            print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + str(auction['serial_number']) + '\n    Name: ' + auction['name'])
             i += 1
         selection = input('\n' + 'Select auction to bid (enter q to exit): ')
 
@@ -380,7 +380,7 @@ def get_blocks_from_auction():
 
     i = 1
     for auction in auctions:
-        print('\n' + (str(i) if i > 10 else ('0' + str(i))) + ') Serial Number: ' + auction['serial_number'] + '\n    Name         : ' + auction['name'])
+        print('\n' + (str(i) if i > 10 else ('0' + str(i))) + ') Serial Number: ' + str(auction['serial_number']) + '\n    Name         : ' + auction['name'])
         i += 1
     selection = input('\n' + 'Select auction (enter q to exit): ')
 
@@ -391,7 +391,7 @@ def get_blocks_from_auction():
         clear()
         i = 1
         for auction in auctions:
-            print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + auction['serial_number'] + '\n    Name: ' + auction['name'])
+            print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + str(auction['serial_number']) + '\n    Name: ' + auction['name'])
             i += 1
         selection = input('\n' + 'Select auction (enter q to exit): ')
 

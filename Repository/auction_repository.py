@@ -55,6 +55,7 @@ def get_public_key(cert):
     # Initialize RSA key
     return RSA.importKey(subjectPublicKeyInfo)
 
+
 certs = pem.parse_file('SSL/certificates.pem')
 manager_public_key = get_public_key(certs[0])
 with open("SSL/key.pem","rb") as mf:
@@ -85,6 +86,21 @@ def decrypt_sym(enc, key):
     iv = enc[:AES.block_size]
     cipher = AES.new(key, AES.MODE_CFB, iv)
     return cipher.decrypt(enc[AES.block_size:]).decode('utf-8')
+
+recent_keys = []
+
+def clear_old_keys():
+    datetime.now()
+    global recent_keys
+    recent_keys = [x for x in recent_keys if (datetime.now() - x[0]).total_seconds() > 10]
+
+def check_for_replay_attack(key):
+    clear_old_keys()
+    if key in [x[1] for x in recent_keys]:
+        return True
+    else:
+        recent_keys.append((datetime.now(), key))
+        return False
 
 
 @app.route("/")
@@ -146,7 +162,8 @@ def create_test_auction():
 def place_bid():
 
     key = decrypt(request.form['key'])
-    
+    check_for_replay_attack(key)
+
     data = json.loads(decrypt_sym(request.form['symdata'], key))
 
     received_mac = request.form['signature']
@@ -183,7 +200,7 @@ def place_bid():
 
 @app.route('/get_last_auction_bid', methods=['GET'])
 def get_last_auction_bid():
-    serial_number = request.args.get('serial_number')
+    serial_number = int(request.args.get('serial_number'))
     auction = get_auction(serial_number)
     if not auction:
         return 'Auction does not exist'
@@ -191,7 +208,7 @@ def get_last_auction_bid():
 
 @app.route('/get_last_auction_block', methods=['GET'])
 def get_last_auction_block():
-    serial_number = request.args.get('serial_number')
+    serial_number = int(request.args.get('serial_number'))
     auction = get_auction(serial_number)
     if not auction:
         return 'Auction does not exist'
@@ -207,11 +224,11 @@ def get_open_auctions():
 
 @app.route('/get_blocks', methods=['GET'])
 def get_blocks():
-    return json.dumps([x.get_json_block() for x in get_auction(request.args.get('serial_number')).blocks])
+    return json.dumps([x.get_json_block() for x in get_auction(int(request.args.get('serial_number'))).blocks])
 
 @app.route("/close_auction", methods=['POST'])
 def close_auction():
-    serial_number = request.form['serial_number']
+    serial_number = int(request.form['serial_number'])
     user = request.form['user']
     auction = get_auction(serial_number)
     if auction.creator != user: return "Wrong user!"

@@ -17,11 +17,13 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Hash.HMAC import HMAC
 from Crypto.Hash import SHA256
+from datetime import datetime
 
 
 #PEM_pass = getpass('PEM Passphrase: ')
 PEM_pass = '12345'
-recent_keys = []
+
+
 
 with open('addresses.json', 'r') as myfile:
     addresses = json.load(myfile)
@@ -80,13 +82,27 @@ def decrypt_sym(enc, key):
     cipher = AES.new(key, AES.MODE_CFB, iv)
     return cipher.decrypt(enc[AES.block_size:]).decode('utf-8')
 
+recent_keys = []
 
+def clear_old_keys():
+    datetime.now()
+    global recent_keys
+    recent_keys = [x for x in recent_keys if (datetime.now() - x[0]).total_seconds() > 10]
+
+def check_for_replay_attack(key):
+    clear_old_keys()
+    if key in [x[1] for x in recent_keys]:
+        return True
+    else:
+        recent_keys.append((datetime.now(), key))
+        return False
 
 
 @app.route('/createAuction', methods=['POST'])
 def createAuction():
     
     key = decrypt(request.form['key'])
+    check_for_replay_attack(key)
 
     data = json.loads(decrypt_sym(request.form['symdata'], key))
     received_mac = request.form['signature']
@@ -141,6 +157,8 @@ def createAuction():
 def closeAuction():
 
     key = decrypt(request.form['key'])
+    check_for_replay_attack(key)
+
     data = json.loads(decrypt_sym(request.form['symdata'], key))
     received_mac = request.form['signature']
     
