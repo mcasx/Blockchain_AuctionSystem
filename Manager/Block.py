@@ -11,11 +11,11 @@ class Block(object):
 
     def hash(self):
         
+        m = hashlib.sha256()
         if not self.bid is None:
-            m = self.bid.hash()
+            m.update(self.bid.originalHash)
             m.update(str(self.prev_signature).encode('utf-8'))
-        else:
-            m = m = hashlib.sha256()
+
         m.update(str(self.nonce).encode('utf-8'))
         return m
 
