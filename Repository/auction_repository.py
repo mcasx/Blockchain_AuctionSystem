@@ -78,7 +78,7 @@ def decrypt(data):
 
 def createReceipt(block):
     signer = PKCS1_v1_5.new(private_key)
-    return signer.sign(block.hash())
+    return signer.sign(block.bid.originalHash)
     
 
 def decrypt_sym(enc, key):
@@ -182,20 +182,28 @@ def place_bid():
     
     nonce = data['nonce']
 
-    r = s.post(auction_manager_add + '/verify_user', data = {
+    if not block.verifyNonce(nonce, auction.chalenge):
+        return json.dumps("Bid refused")
+
+    r = s.post(auction_manager_add + '/bid_authenticate', data = {
         'encrypted_user_data' : request.form['encrypted_user_data'],
         'user_mac' : request.form['user_mac'],
-        'user_key' : request.form['user_key']
+        'user_key' : request.form['user_key'],
+        'auction': auction,
+        'value': block.bid.value
     })
 
     if r.text == 'False':
         return json.dumps("User authentication Failed")
 
-    if block.verifyNonce(nonce, auction.chalenge):
-        auction.add_block(block)
-        receipt = base64.b64encode(createReceipt(block))
-        return json.dumps(("Bid added", receipt.decode()))
-    return json.dumps("Bid refused")
+    bid_data = json.loads(r.text)
+    block.bid.user = bid_data['user']
+    block.bid.value = bid_data['value']
+
+    auction.add_block(block)
+    receipt = base64.b64encode(createReceipt(block))
+    return json.dumps(("Bid added", receipt.decode()))
+
     
 
 @app.route('/get_last_auction_bid', methods=['GET'])
@@ -212,7 +220,7 @@ def get_last_auction_block():
     auction = get_auction(serial_number)
     if not auction:
         return 'Auction does not exist'
-    return json.dumps({'auction_type':auction.auction_type, 'hash':auction.get_last_block().hash().hexdigest(), 'value': (auction.get_last_block().bid.value if not auction.get_last_block().bid is None else 0)}) 
+    return json.dumps({'auction_type':auction.auction_type, 'hash':auction.get_last_block().prev_signature.hexdigest(), 'value': (auction.get_last_block().bid.value if not auction.get_last_block().bid is None else 0)}) 
 
 @app.route('/get_open_user_auctions', methods=['GET'])
 def get_open_user_auctions():

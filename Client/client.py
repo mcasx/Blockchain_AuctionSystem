@@ -95,12 +95,12 @@ def is_number(s):
     except ValueError:
         return False
 
-def checkReceipt(receipt, block):
+def checkReceipt(receipt, hashBid):
     certs = pem.parse_file("SSL/certificates.pem")
     #Second cert is Repository which is the one we want here
     cert = certs[1]
     try:
-        crypto.verify(cert, receipt, block, "RSA-SHA1")
+        crypto.verify(cert, receipt, hashBid, "RSA-SHA1")
     except crypto.Error:
         print("Receipt is invalid")
         return False
@@ -315,14 +315,16 @@ def place_bid():
 
     bid = Bid(user_info['BI'], value)
 
+    user_key = Random.get_random_bytes(32)
+
+    bid.value = encrypt_sym(bid.value, user_key)
+    bid.user = encrypt_sym(bid.user, user_key)
+
     new_block = Block(bid, block['hash'])
     
-    print(auctions[int(selection)-1]['chalenge'])
-
     new_block.mine(int(auctions[int(selection)-1]['chalenge']))
     
 
-    user_key = Random.get_random_bytes(32)
     encrypted_user_info = encrypt_sym(json.dumps(user_info), user_key)
     user_mac = HMAC(user_key, msg=encrypted_user_info, digestmod=SHA256)
 
@@ -350,7 +352,12 @@ def place_bid():
     response = json.loads(r.text)
 
     if isinstance(response, list):
-        receipts.append({'auction': auction, 'block': new_block, 'receipt':base64.b64decode(response[1].encode())})
+        receipt = base64.b64decode(responde[1].encode())
+        if checkReceipt(receipt, block.bid.originalHash):
+            receipts.append({'auction': auction, 'block': new_block, 'receipt':receipt})
+        else:
+            print("WARNING: INVALID RECEIPT")
+        def checkReceipt(receipt, block):
 
     input(response[0] + '\n\nPress enter to continue')
     return
