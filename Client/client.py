@@ -72,6 +72,13 @@ def encrypt_sym(data, key):
 def base64_encode(data):
     return base64.b64encode(data)
 
+
+def base64_decode(data):
+    if isinstance(data, str):
+        data = data.encode()
+    return base64.b64decode(data)
+
+    
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'

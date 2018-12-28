@@ -2,9 +2,13 @@ import hashlib
 import base64
 
 def base64_encode(data):
+    if isinstance(data, str):
+        data = data.encode()
     return base64.b64encode(data)
 
 def base64_decode(data):
+    if isinstance(data, str):
+        data = data.encode()
     return base64.b64decode(data)
 
 class Bid(object):
@@ -20,7 +24,6 @@ class Bid(object):
             m.update(self.user.encode('utf-8'))
         else:
             m.update(self.user)
-
         
         if(isinstance(self.value, str)):
             m.update(self.value.encode('utf-8'))

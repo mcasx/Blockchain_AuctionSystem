@@ -246,6 +246,7 @@ def get_open_auctions():
 
 @app.route('/get_blocks', methods=['GET'])
 def get_blocks():
+    input(get_auction(int(request.args.get('serial_number'))).blocks[1].bid.user)
     return json.dumps([x.get_json_block() for x in get_auction(int(request.args.get('serial_number'))).blocks])
 
 def _close_auction(auction):
