@@ -234,7 +234,7 @@ def verify_user():
     user_data = decrypt_sym(request.form['encrypted_user_data'], key)
 
     received_mac = request.form['user_mac']
-    if not verify_user(key, user_data, received_mac):
+    if not _verify_user(key, user_data, received_mac):
         return "False"
 
 @app.route('/bid_authenticate', methods = ['POST'])
@@ -244,7 +244,7 @@ def bid_authenticate():
     user_data = decrypt_sym(request.form['encrypted_user_data'], key)
 
     received_mac = request.form['user_mac']
-    if not verify_user(key, user_data, received_mac):
+    if not _verify_user(key, user_data, received_mac):
         return "False"
     
     auction = request.form['auction']
@@ -259,7 +259,7 @@ def bid_authenticate():
     return json.dumps(return_value)
     
 
-def verify_user(key, user_data, received_mac):
+def _verify_user(key, user_data, received_mac):
     mac = HMAC(key, msg=request.form['encrypted_user_data'], digestmod=SHA256) 
     if(received_mac != mac.hexdigest()):
         return 'Data Integrity Compromised!'

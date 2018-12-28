@@ -11,11 +11,11 @@ class Block(object):
 
     def hash(self):
         
+        m = hashlib.sha256()
         if not self.bid is None:
-            m = self.bid.hash()
+            m.update(str(self.bid.originalHash).encode('utf-8'))
             m.update(str(self.prev_signature).encode('utf-8'))
-        else:
-            m = m = hashlib.sha256()
+
         m.update(str(self.nonce).encode('utf-8'))
         return m
 
@@ -39,10 +39,16 @@ class Block(object):
         return False
 
     def get_json_block(self):
-        return json.dumps(Block().__dict__) if self.bid is None else json.dumps(Block(self.bid.__dict__, self.prev_signature, self.nonce).__dict__)
+        json.dumps(self.prev_signature)
+        json.dumps(self.nonce)
+        return json.dumps(Block().__dict__) if self.bid is None else json.dumps(Block(self.bid.__dict__(), self.prev_signature, self.nonce).__dict__)
 
 def get_block_from_dict(block):
-    return Block() if block['bid'] is None\
-        else Block(Bid(block['bid']['user'], float(block['bid']['value']), block['bid']['timeStamp']), block['prev_signature'])
+    if block['bid'] is None:
+        return Block()
+    else:
+        bid = Bid(block['bid']['user'], block['bid']['value'])
+        bid.originalHash = block['bid']['originalHash']
+        return Block(bid, block['prev_signature'])
 
     

@@ -179,7 +179,8 @@ def place_bid():
     if auction.state == "Closed": return json.dumps("Bid refused")
 
     block = get_block_from_dict(json.loads(data['block']))
-    
+
+
     nonce = data['nonce']
 
     if not block.verifyNonce(nonce, auction.chalenge):
@@ -205,7 +206,6 @@ def place_bid():
     return json.dumps(("Bid added", receipt.decode()))
 
     
-
 @app.route('/get_last_auction_bid', methods=['GET'])
 def get_last_auction_bid():
     serial_number = int(request.args.get('serial_number'))

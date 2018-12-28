@@ -12,3 +12,6 @@ class Bid(object):
         m.update(self.user.encode('utf-8'))
         m.update(str(self.value).encode('utf-8'))
         return m
+
+    def __dict__(self):
+        return {'user' : str(self.user), 'value' : str(self.value), 'originalHash' : self.originalHash}

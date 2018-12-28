@@ -317,12 +317,13 @@ def place_bid():
 
     user_key = Random.get_random_bytes(32)
 
-    bid.value = encrypt_sym(bid.value, user_key)
+    bid.value = encrypt_sym(str(bid.value), user_key)
     bid.user = encrypt_sym(bid.user, user_key)
 
     new_block = Block(bid, block['hash'])
-    
     new_block.mine(int(auctions[int(selection)-1]['chalenge']))
+    
+    print(new_block.bid.originalHash)
     
 
     encrypted_user_info = encrypt_sym(json.dumps(user_info), user_key)
@@ -339,6 +340,7 @@ def place_bid():
     encrypted = encrypt_sym(json.dumps(data), key)
     mac = HMAC(key, msg=encrypted, digestmod=SHA256)
 
+
     r = s.post(auction_repository_add + "/place_bid", data = {
         'symdata' : encrypted,
         'key' : encrypt_repo(key),
@@ -347,7 +349,6 @@ def place_bid():
         'user_mac' : user_mac,
         'user_key' : encrypt_man(user_key)
     })
-    input('oi')
 
     response = json.loads(r.text)
 
@@ -357,6 +358,8 @@ def place_bid():
             receipts.append({'auction': auction, 'block': new_block, 'receipt':receipt})
         else:
             print("WARNING: INVALID RECEIPT")
+
+    input(response)
 
     input(response[0] + '\n\nPress enter to continue')
     return
