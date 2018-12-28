@@ -14,7 +14,6 @@ class auction(object):
         self.state = "Open"
         self.chalenge = 1
 
-
     def add_block(self, block):
         self.blocks.append(block)
 
