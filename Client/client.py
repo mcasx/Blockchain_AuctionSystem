@@ -98,9 +98,8 @@ def is_number(s):
 def checkReceipt(receipt, hashBid):
     certs = pem.parse_file("SSL/certificates.pem")
     #Second cert is Repository which is the one we want here
-    cert = certs[1]
     try:
-        crypto.verify(cert, receipt, hashBid, "RSA-SHA1")
+        repository_public_key.verify(hashBid, (receipt,))
     except crypto.Error:
         print("Receipt is invalid")
         return False
@@ -350,8 +349,8 @@ def place_bid():
     response = json.loads(r.text)
 
     if isinstance(response, list):
-        receipt = base64.b64decode(response[1].encode())
-        if checkReceipt(receipt, block.bid.originalHash):
+        receipt = response[1]
+        if checkReceipt(receipt, new_block.bid.originalHash):
             receipts.append({'auction': auction, 'block': new_block, 'receipt':receipt})
         else:
             print("WARNING: INVALID RECEIPT")

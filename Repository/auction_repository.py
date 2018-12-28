@@ -11,7 +11,6 @@ import ssl
 import requests
 import base64
 import codecs
-import jsonpickle
 from OpenSSL import crypto
 from getpass import getpass
 from Crypto.Util.asn1 import DerSequence
@@ -77,8 +76,7 @@ def decrypt(data):
 
 
 def createReceipt(block):
-    pkey = crypto.load_pkcs12(open("SSL/key.pem","rb").read(), passphrase=PEM_pass)
-    return crypto.sign(pkey, block.bid.originalHash, "sha256") 
+    return private_key.sign(block.bid.originalHash.encode(), random.getrandbits(128))[0]
     
 
 def decrypt_sym(enc, key):
@@ -92,7 +90,7 @@ recent_keys = []
 def clear_old_keys():
     datetime.now()
     global recent_keys
-    recent_keys = [x for x in recent_keys if (datetime.now() - x[0]).total_seconds() > 10]
+    recent_keys = [x for x in recent_keys if (datetime.now() - x[0]).total_seconds() < 10]
 
 def check_for_replay_attack(key):
     clear_old_keys()
@@ -213,8 +211,8 @@ def place_bid():
             return json.dumps("Bid not added: Value must be higher than highest bid")
 
     auction.add_block(block)
-    receipt = base64.b64encode(createReceipt(block))
-    return json.dumps(("Bid added", receipt.decode()))
+    receipt = createReceipt(block)
+    return json.dumps(("Bid added", receipt))
 
     
 @app.route('/get_last_auction_bid', methods=['GET'])

@@ -93,7 +93,7 @@ recent_keys = []
 def clear_old_keys():
     datetime.now()
     global recent_keys
-    recent_keys = [x for x in recent_keys if (datetime.now() - x[0]).total_seconds() > 10]
+    recent_keys = [x for x in recent_keys if (datetime.now() - x[0]).total_seconds() < 10]
 
 def check_for_replay_attack(key):
     clear_old_keys()
