@@ -2,6 +2,13 @@ import hashlib
 from Bid import Bid
 import json
 import random
+import base64
+
+def base64_encode(data):
+    return base64.b64encode(data)
+
+def base64_decode(data):
+    return base64.b64decode(data)
 
 class Block(object):
     def __init__(self, bid = None, prev_signature = None, nonce = 0):
@@ -47,7 +54,7 @@ def get_block_from_dict(block):
     if block['bid'] is None:
         return Block()
     else:
-        bid = Bid(block['bid']['user'], block['bid']['value'])
+        bid = Bid(base64_decode(block['bid']['user']), base64_decode(block['bid']['value']))
         bid.originalHash = block['bid']['originalHash']
         return Block(bid, block['prev_signature'])
 

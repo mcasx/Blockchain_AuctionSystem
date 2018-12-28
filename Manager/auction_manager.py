@@ -79,6 +79,9 @@ def decrypt(data):
 def base64_decode(data):
     return base64.b64decode(data)
 
+def base64_encode(data):
+    return base64.b64encode(data)
+
 def decrypt_sym(enc, key):
     enc = base64.b64decode(enc)
     iv = enc[:AES.block_size]
@@ -258,9 +261,9 @@ def bid_authenticate():
         return json.dumps("Invalid") 
 
     if auctions[auction][0] == "Blind Auction":
-        value = encrypt_sym(decrypt_sym(value, auctions[auction][1])
+        value = encrypt_sym(value, auctions[auction][1]), 
     
-    return_value = {"user": user, "value": value}
+    return_value = {"user": base64_encode(user).decode(), "value": base64_encode(value.encode()).decode('utf-8')}
     return json.dumps(return_value)
     
 
