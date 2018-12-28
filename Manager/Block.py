@@ -46,13 +46,13 @@ class Block(object):
         return False
 
     def get_json_block(self):
-        json.dumps(self.prev_signature)
-        json.dumps(self.nonce)
-        return json.dumps(Block().__dict__) if self.bid is None else json.dumps(Block(self.bid.__dict__(), self.prev_signature, self.nonce).__dict__)
+        return json.dumps(self.__dict__) if self.bid is None else json.dumps(Block(self.bid.__dict__(), self.prev_signature, self.nonce).__dict__)
 
 def get_block_from_dict(block):
     if block['bid'] is None:
-        return Block()
+        b = Block()
+        b.nonce = block['nonce']
+        return b
     else:
         bid = Bid(base64_decode(block['bid']['user']), base64_decode(block['bid']['value']))
         bid.originalHash = block['bid']['originalHash']

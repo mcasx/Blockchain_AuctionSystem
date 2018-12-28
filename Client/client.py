@@ -26,6 +26,7 @@ from Crypto.Cipher import AES
 from Crypto import Random
 from Crypto.Hash.HMAC import HMAC
 from Crypto.Hash import SHA256
+import hashlib
 
 urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
 receipts = []
@@ -405,7 +406,7 @@ def get_blocks_from_auction():
     params = {'serial_number': auction}
     r = s.get(auction_repository_add + "/get_blocks", params = params)
     
-    for block in json.loads(r.text):
+    for block in json.loads(r.content):
         print(block)
     input('\nPress enter to continue')
 
@@ -415,6 +416,55 @@ def view_receipts():
     else:
         print(receipts)
     input('\nPress Enter to continue')
+
+def validate_auction():
+    r = s.get(auction_repository_add + "/get_auctions")
+    auctions = json.loads(r.text)
+    if not auctions: 
+        input('No auctions in the repository\n\nPress Enter to continue')
+        return
+
+    i = 1
+    for auction in auctions:
+        print('\n' + (str(i) if i > 10 else ('0' + str(i))) + ') Serial Number: ' + str(auction['serial_number']) + '\n    Name         : ' + auction['name'])
+        i += 1
+    selection = input('\n' + 'Select auction (enter q to exit): ')
+
+    while(not is_int(selection) or (int(selection) < 0 or int(selection)> len(auctions))):
+        if(selection and selection[0] == 'q'): return
+        clear()
+        input('Invalid Selection\n\nPress Enter to continue ')
+        clear()
+        i = 1
+        for auction in auctions:
+            print(str(i) if i > 10 else ('0' + str(i)) + ') Serial Number: ' + str(auction['serial_number']) + '\n    Name: ' + auction['name'])
+            i += 1
+        selection = input('\n' + 'Select auction (enter q to exit): ')
+
+    auction = auctions[int(selection)-1]['serial_number']
+
+    params = {'serial_number': auction}
+    r = s.get(auction_repository_add + "/get_blocks", params = params)
+    
+    print(json.loads(r.content))
+    nonce_zero = json.loads(json.loads(r.text)[0])["nonce"]
+    prev_hash = hashlib.sha256()
+    prev_hash.update(str(nonce_zero).encode('utf-8'))
+    for x in json.loads(r.text)[1:]:
+        block = json.loads(x)
+        if block["prev_signature"] != prev_hash.hexdigest():
+            input("WARNING: Auction is invalid")
+            clear()
+            return
+        prev_hash = hashlib.sha256()
+        prev_hash.update(str(block["bid"]["originalHash"]).encode('utf-8'))
+        prev_hash.update(str(block["prev_signature"]).encode('utf-8'))
+        prev_hash.update(str(block["nonce"]).encode('utf-8'))
+
+    input("Auction is valid!")
+    clear()
+    
+    
 
 if __name__ == "__main__":
     s = requests.Session()
@@ -437,6 +487,7 @@ if __name__ == "__main__":
     bid_item = FunctionItem("Place Bid", place_bid)
     receipts_item = FunctionItem("View Receipts", view_receipts)
     blocks_item = FunctionItem("Get Blocks of Auction", get_blocks_from_auction)
+    vali_auction = FunctionItem("Validate Auction", validate_auction)
 
     menu.append_item(create_auction_item)
     menu.append_item(create_test_auction_item)
@@ -445,6 +496,7 @@ if __name__ == "__main__":
     menu.append_item(bid_item)
     menu.append_item(receipts_item)
     menu.append_item(blocks_item)
+    menu.append_item(vali_auction)
 
     menu.show()
 

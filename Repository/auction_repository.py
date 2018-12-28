@@ -131,6 +131,7 @@ def create_auction():
     bid_validations = (data['bid_validations'] if 'bid_validdations' in data else None)
     serial_number = data['serialNumber']
     new_auction = auction(name, serial_number, time_limit, description, auction_type, creator, bid_validations)
+    print(new_auction.blocks[0].nonce)
     
     now = datetime.now()
 
@@ -261,7 +262,9 @@ def close_auction():
 
 def get_auction(serial_number):
     for a in auctions:
-        if a.serial_number == serial_number: return a
+        if a.serial_number == serial_number: 
+            print(a.blocks[0].nonce)
+            return a
     return None
 
 
