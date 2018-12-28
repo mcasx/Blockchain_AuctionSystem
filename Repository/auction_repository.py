@@ -190,7 +190,7 @@ def place_bid():
         'encrypted_user_data' : request.form['encrypted_user_data'],
         'user_mac' : request.form['user_mac'],
         'user_key' : request.form['user_key'],
-        'auction': auction,
+        'auction': auction.serial_number,
         'value': block.bid.value
     })
 

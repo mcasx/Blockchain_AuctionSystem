@@ -241,13 +241,13 @@ def verify_user():
 def bid_authenticate():
     key = decrypt(request.form['user_key'])
 
-    user_data = decrypt_sym(request.form['encrypted_user_data'], key)
+    user_data = json.loads(decrypt_sym(request.form['encrypted_user_data'], key))
 
     received_mac = request.form['user_mac']
     if not _verify_user(key, user_data, received_mac):
         return "False"
     
-    auction = request.form['auction']
+    auction = int(request.form['auction'])
 
     user = encrypt_sym(user_data['BI'], auctions[auction][1])
     if auctions[auction][0] == "Blind Auction":

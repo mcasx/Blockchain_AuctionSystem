@@ -322,9 +322,6 @@ def place_bid():
 
     new_block = Block(bid, block['hash'])
     new_block.mine(int(auctions[int(selection)-1]['chalenge']))
-    
-    print(new_block.bid.originalHash)
-    
 
     encrypted_user_info = encrypt_sym(json.dumps(user_info), user_key)
     user_mac = HMAC(user_key, msg=encrypted_user_info, digestmod=SHA256)
