@@ -99,7 +99,7 @@ def checkReceipt(receipt, hashBid):
     certs = pem.parse_file("SSL/certificates.pem")
     #Second cert is Repository which is the one we want here
     try:
-        repository_public_key.verify(hashBid, (receipt,))
+        repository_public_key.verify(int(hashBid, 16), (receipt,))
     except crypto.Error:
         print("Receipt is invalid")
         return False
