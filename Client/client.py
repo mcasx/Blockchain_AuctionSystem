@@ -352,12 +352,11 @@ def place_bid():
     response = json.loads(r.text)
 
     if isinstance(response, list):
-        receipt = base64.b64decode(responde[1].encode())
+        receipt = base64.b64decode(response[1].encode())
         if checkReceipt(receipt, block.bid.originalHash):
             receipts.append({'auction': auction, 'block': new_block, 'receipt':receipt})
         else:
             print("WARNING: INVALID RECEIPT")
-        def checkReceipt(receipt, block):
 
     input(response[0] + '\n\nPress enter to continue')
     return
