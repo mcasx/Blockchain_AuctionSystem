@@ -102,6 +102,11 @@ def check_for_replay_attack(key):
         recent_keys.append((datetime.now(), key))
         return False
 
+def base64_encode(data):
+    return base64.b64encode(data)
+
+def base64_decode(data):
+    return base64.b64decode(data)
 
 @app.route("/")
 def hello():
@@ -201,10 +206,10 @@ def place_bid():
         return json.dumps("Invalid value")
 
     bid_data = json.loads(r.text)
-    block.bid.user = bid_data['user']
-    block.bid.value = bid_data['value']
-    if auction.auction_type == "English Auction" and auction.get_last_block():
-        if (auction.get_last_bid().value >= block.bid.value):
+    block.bid.user = base64_decode(bid_data['user'].encode())
+    block.bid.value = base64_decode(bid_data['value'].encode())
+    if auction.auction_type == "English Auction" and auction.get_last_block().bid:
+        if (auction.get_last_block().bid.value >= block.bid.value):
             return json.dumps("Bid not added: Value must be higher than highest bid")
 
     auction.add_block(block)

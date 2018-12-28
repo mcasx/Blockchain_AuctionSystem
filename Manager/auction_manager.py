@@ -261,9 +261,9 @@ def bid_authenticate():
         return json.dumps("Invalid") 
 
     if auctions[auction][0] == "Blind Auction":
-        value = encrypt_sym(decrypt_sym(value, auctions[auction][1])
+        value = encrypt_sym(value, auctions[auction][1]), 
     
-    return_value = {"user": base64_encode(user).decode('utf-8'), "value": base64_encode(value).decode('utf-8')}
+    return_value = {"user": base64_encode(user).decode(), "value": base64_encode(value.encode()).decode('utf-8')}
     return json.dumps(return_value)
     
 
