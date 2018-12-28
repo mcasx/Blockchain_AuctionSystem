@@ -250,10 +250,15 @@ def bid_authenticate():
     auction = int(request.form['auction'])
 
     user = encrypt_sym(user_data['BI'], auctions[auction][1])
+    value = decrypt_sym(request.form['value'], key)
+    try:
+        if float(value) < 0:
+            return json.dumps("Invalid")
+    except ValueError:
+        return json.dumps("Invalid") 
+
     if auctions[auction][0] == "Blind Auction":
-        value = encrypt_sym(decrypt_sym(request.form['value'], key), auctions[auction][1])
-    else:
-        value = decrypt_sym(request.form['value'], key)
+        value = encrypt_sym(decrypt_sym(value, auctions[auction][1])
     
     return_value = {"user": user, "value": value}
     return json.dumps(return_value)
