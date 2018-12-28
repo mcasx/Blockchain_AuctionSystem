@@ -77,8 +77,7 @@ def decrypt(data):
 
 
 def createReceipt(block):
-    signer = PKCS1_v1_5.new(private_key)
-    return signer.sign(block.bid.originalHash)
+    return crypto.sign(private_key, block.bid.originalHash, "sha256") 
     
 
 def decrypt_sym(enc, key):
