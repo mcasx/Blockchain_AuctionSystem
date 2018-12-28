@@ -78,7 +78,7 @@ def base64_decode(data):
         data = data.encode()
     return base64.b64decode(data)
 
-    
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -414,6 +414,11 @@ def get_blocks_from_auction():
     r = s.get(auction_repository_add + "/get_blocks", params = params)
     
     for block in json.loads(r.content):
+        block = json.loads(block)
+        print(block)
+        if block['bid'] is not None:
+            block['bid']['user'] = base64_decode(block['bid']['user'])
+            block['bid']['value'] = base64_decode(block['bid']['value'])
         print(block)
     input('\nPress enter to continue')
 
