@@ -317,8 +317,6 @@ def place_bid():
 
     new_block = Block(bid, block['hash'])
     
-    print(auctions[int(selection)-1]['chalenge'])
-
     new_block.mine(int(auctions[int(selection)-1]['chalenge']))
     
 
@@ -350,7 +348,12 @@ def place_bid():
     response = json.loads(r.text)
 
     if isinstance(response, list):
-        receipts.append({'auction': auction, 'block': new_block, 'receipt':base64.b64decode(response[1].encode())})
+        receipt = base64.b64decode(responde[1].encode())
+        if checkReceipt(receipt, block):
+            receipts.append({'auction': auction, 'block': new_block, 'receipt':receipt})
+        else:
+            print("WARNING: INVALID RECEIPT")
+        def checkReceipt(receipt, block):
 
     input(response[0] + '\n\nPress enter to continue')
     return
