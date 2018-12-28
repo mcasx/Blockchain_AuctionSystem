@@ -22,6 +22,7 @@ from Crypto.Hash import SHA256
 #PEM_pass = getpass('PEM Passphrase: ')
 PEM_pass = '12345'
 recent_keys = []
+auctions = {}
 
 with open('addresses.json', 'r') as myfile:
     addresses = json.load(myfile)
@@ -125,6 +126,8 @@ def createAuction():
         'creator' : creator['BI']
     }
 
+    auctions[serialNumber] = (auctionType, Random.get_random_bytes(32))
+
     key = Random.get_random_bytes(32)
     encrypted = encrypt_sym(json.dumps(data), key)
     mac = HMAC(key, msg=encrypted, digestmod=SHA256)
@@ -211,7 +214,32 @@ def verify_user():
     user_data = decrypt_sym(request.form['encrypted_user_data'], key)
 
     received_mac = request.form['user_mac']
+    if not verify_user(key, user_data, received_mac):
+        return "False"
+
+@app.route('/bid_authenticate', methods = ['POST'])
+def bid_authenticate():
+    key = decrypt(request.form['user_key'])
+
+    user_data = decrypt_sym(request.form['encrypted_user_data'], key)
+
+    received_mac = request.form['user_mac']
+    if not verify_user(key, user_data, received_mac):
+        return "False"
     
+    auction = request.form['auction']
+
+    user = encrypt_sym(user_data['BI'], auctions[auction][1])
+    if auctions[auction][0] == "Blind Auction":
+        value = encrypt_sym(decrypt_sym(request.form['value'], key), auctions[auction][1])
+    else:
+        value = decrypt_sym(request.form['value'], key)
+    
+    return_value = {"user": user, "value": value}
+    return json.dumps(return_value)
+    
+
+def verify_user(key, user_data, received_mac):
     mac = HMAC(key, msg=request.form['encrypted_user_data'], digestmod=SHA256) 
     if(received_mac != mac.hexdigest()):
         return 'Data Integrity Compromised!'
@@ -220,10 +248,8 @@ def verify_user():
     if(received_mac != mac.hexdigest()):
         return 'Data Integrity Compromised!'
 
-    return_value = confirmSignature(user_data['Certificate'], user_data['Signature']) 
-    return str(return_value)
-    
-    
+    return confirmSignature(user_data['Certificate'], user_data['Signature']) 
+
 
 if __name__ == "__main__":
     #s = requests.Session()

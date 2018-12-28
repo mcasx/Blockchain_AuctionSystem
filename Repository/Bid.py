@@ -1,11 +1,11 @@
 import hashlib
 
 class Bid(object):
-    def __init__(self, user, value, timeStamp = None):
+    def __init__(self, user, value):
         self.user = user
         self.value = value
-        #Note: timestamp is defined by server when it is processed
-        self.timeStamp = timeStamp
+        #Note that this hash should never be altered after the Bid has been created, for mining use the function hash()
+        self.originalHash = self.hash()
 
     def hash(self):
         m = hashlib.sha256()
