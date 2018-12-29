@@ -200,7 +200,7 @@ def create_test_auction():
     clear()
     time_limit = 'Jun 1 2020 1:33PM'
     clear()
-    auction_type = "English Auction"
+    auction_type = "Blind Auction"
     clear()
     creator = getUserAuthInfo()
 

@@ -252,7 +252,9 @@ def bid_authenticate():
     
     auction = int(request.form['auction'])
 
+    input(user_data['BI'])
     user = encrypt_sym(user_data['BI'], auctions[auction][1])
+    
     value = decrypt_sym(request.form['value'], key)
     try:
         if float(value) < 0:
@@ -260,10 +262,13 @@ def bid_authenticate():
     except ValueError:
         return json.dumps("Invalid") 
 
+
     if auctions[auction][0] == "Blind Auction":
-        value = encrypt_sym(value, auctions[auction][1]), 
+        value = encrypt_sym(value, auctions[auction][1]) 
+    else:
+        value = value.encode()
     
-    return_value = {"user": base64_encode(user).decode(), "value": base64_encode(value.encode()).decode('utf-8')}
+    return_value = {"user": base64_encode(user).decode(), "value": base64_encode(value).decode('utf-8')}
     return json.dumps(return_value)
     
 
