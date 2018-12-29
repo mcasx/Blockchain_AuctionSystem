@@ -246,6 +246,7 @@ def get_open_auctions():
 
 @app.route('/get_blocks', methods=['GET'])
 def get_blocks():
+    print(json.dumps([x.get_json_block() for x in get_auction(int(request.args.get('serial_number'))).blocks]))
     return json.dumps([x.get_json_block() for x in get_auction(int(request.args.get('serial_number'))).blocks])
 
 def _close_auction(auction):
@@ -292,6 +293,11 @@ def get_auction(serial_number):
 @app.route("/get_auctions", methods=['GET'])
 def get_auctions():
     return str(json.dumps([x.__dict__ for x in auctions], indent=4, default=str))
+
+@app.route("/get_closed_auctions", methods=['GET'])
+def get_closed_auctions():
+    print([x for x in auctions])
+    return str(json.dumps([x.__dict__ for x in auctions if x.state == "Closed"], indent=4, default=str))
 
 if __name__ == "__main__":
     '''
