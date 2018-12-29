@@ -252,7 +252,6 @@ def bid_authenticate():
     
     auction = int(request.form['auction'])
 
-    input(user_data['BI'])
     user = encrypt_sym(user_data['BI'], auctions[auction][1])
     
     value = decrypt_sym(request.form['value'], key)
