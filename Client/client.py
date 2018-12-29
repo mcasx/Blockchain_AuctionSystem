@@ -415,11 +415,9 @@ def get_blocks_from_auction():
     
     for block in json.loads(r.content):
         block = json.loads(block)
-        print(block)
         if block['bid'] is not None:
             block['bid']['user'] = base64_decode(block['bid']['user'])
             block['bid']['value'] = base64_decode(block['bid']['value'])
-        print(block)
     input('\nPress enter to continue')
 
 def view_receipts():
@@ -468,9 +466,13 @@ def validate_auction():
             clear()
             return
 
+        block['bid']['user'] = base64_decode(block['bid']['user'])
+        block['bid']['value'] = base64_decode(block['bid']['value'])
+
         bidHash = hashlib.sha256()
-        bidHash.update(str(block["bid"]["user"]).encode('utf-8'))
-        bidHash.update(float(block["bid"]["value"]))
+        bidHash.update(block["bid"]["user"])
+        bidHash.update(block["bid"]["value"])
+
         if bidHash.hexdigest() != str(block["bid"]["originalHash"]):
             input(bcolors.FAIL + "WARNING: Auction is invalid, bid has been altered" + bcolors.ENDC)
             clear()
