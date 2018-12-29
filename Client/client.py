@@ -430,7 +430,7 @@ def view_receipts():
     input('\nPress Enter to continue')
 
 def validate_auction():
-    r = s.get(auction_repository_add + "/get_auctions")
+    r = s.get(auction_repository_add + "/get_closed_auctions")
     auctions = json.loads(r.text)
     if not auctions: 
         input('No auctions in the repository\n\nPress Enter to continue')
@@ -458,22 +458,30 @@ def validate_auction():
     params = {'serial_number': auction}
     r = s.get(auction_repository_add + "/get_blocks", params = params)
     
-    print(json.loads(r.content))
     nonce_zero = json.loads(json.loads(r.text)[0])["nonce"]
     prev_hash = hashlib.sha256()
     prev_hash.update(str(nonce_zero).encode('utf-8'))
     for x in json.loads(r.text)[1:]:
         block = json.loads(x)
         if block["prev_signature"] != prev_hash.hexdigest():
-            input("WARNING: Auction is invalid")
+            input(bcolors.FAIL + "WARNING: Auction is invalid, blockchain has been broken" + bcolors.ENDC)
             clear()
             return
+
+        bidHash = hashlib.sha256()
+        bidHash.update(str(block["bid"]["user"]).encode('utf-8'))
+        bidHash.update(float(block["bid"]["value"]))
+        if bidHash.hexdigest() != str(block["bid"]["originalHash"]):
+            input(bcolors.FAIL + "WARNING: Auction is invalid, bid has been altered" + bcolors.ENDC)
+            clear()
+            return
+            
         prev_hash = hashlib.sha256()
         prev_hash.update(str(block["bid"]["originalHash"]).encode('utf-8'))
         prev_hash.update(str(block["prev_signature"]).encode('utf-8'))
         prev_hash.update(str(block["nonce"]).encode('utf-8'))
 
-    input("Auction is valid!")
+    input(bcolors.OKGREEN + "Auction is valid!" + bcolors.ENDC)
     clear()
     
     
@@ -511,5 +519,3 @@ if __name__ == "__main__":
     menu.append_item(vali_auction)
 
     menu.show()
-
-
